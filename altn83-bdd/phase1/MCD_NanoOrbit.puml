@@ -1,0 +1,167 @@
+@startuml MCD_NanoOrbit
+!theme plain
+skinparam linetype ortho
+skinparam backgroundColor #FFFFFF
+
+skinparam entity {
+  BackgroundColor #E8EEF9
+  BorderColor #2C3E7A
+  FontColor #1A1A2E
+  FontSize 13
+  StereotypeFontSize 11
+  AttributeFontSize 12
+}
+
+skinparam diamond {
+  BackgroundColor #FDF0E2
+  BorderColor #C0700A
+  FontColor #7A4A00
+  FontSize 12
+}
+
+title
+  <b><size:20>MCD NanoOrbit — MERISE</size></b>
+  <size:13>Projet ALTN83 — CubeSat Earth Observation System</size>
+end title
+
+' ============================================================
+' ENTITES
+' ============================================================
+
+entity "ORBITE" as ORBITE {
+  <u><b>id_orbite</b></u>
+  --
+  type_orbite
+  altitude
+  inclinaison
+  periode_orbitale
+  excentricite
+  zone_couverture
+}
+
+entity "SATELLITE" as SATELLITE {
+  <u><b>id_satellite</b></u>
+  --
+  nom_satellite
+  date_lancement
+  masse
+  format_cubesat
+  statut
+  duree_vie_prevue
+  capacite_batterie
+}
+
+entity "INSTRUMENT" as INSTRUMENT {
+  <u><b>ref_instrument</b></u>
+  --
+  type_instrument
+  modele
+  resolution
+  consommation
+  masse
+}
+
+entity "MISSION" as MISSION {
+  <u><b>id_mission</b></u>
+  --
+  nom_mission
+  objectif
+  zone_geo_cible
+  date_debut
+  date_fin //(nullable)//
+  statut_mission
+}
+
+entity "STATION_SOL" as STATION {
+  <u><b>code_station</b></u>
+  --
+  nom_station
+  latitude
+  longitude
+  diametre_antenne
+  bande_frequence
+  debit_max
+  statut
+}
+
+entity "CENTRE_CONTROLE" as CENTRE {
+  <u><b>id_centre</b></u>
+  --
+  nom_centre
+  ville
+  region_geo
+  fuseau_horaire
+  statut
+}
+
+' ============================================================
+' ASSOCIATIONS
+' ============================================================
+
+diamond "possede" as possede
+
+diamond "EMBARQUEMENT" as EMBARQUEMENT
+note bottom of EMBARQUEMENT
+  <b>Attributs portés :</b>
+  date_integration
+  etat_fonctionnement
+end note
+
+diamond "FENETRE_COM" as FENETRE
+note right of FENETRE
+  <b>Attributs portés :</b>
+  <u>id_fenetre</u> //(identifiant propre)//
+  datetime_debut
+  duree
+  elevation_max
+  volume_donnees
+  statut
+end note
+
+diamond "PARTICIPATION" as PARTICIPATION
+note bottom of PARTICIPATION
+  <b>Attribut porté :</b>
+  role_satellite
+end note
+
+diamond "AFFECTATION\nSTATION" as AFFECTATION
+note bottom of AFFECTATION
+  <b>Attribut porté :</b>
+  date_affectation
+end note
+
+' ============================================================
+' LIENS + CARDINALITES
+' ============================================================
+
+ORBITE "0,N" -down- possede
+possede -down- "1,1" SATELLITE
+
+SATELLITE "0,N" -right- EMBARQUEMENT
+EMBARQUEMENT -right- "0,N" INSTRUMENT
+
+SATELLITE "0,N" -down- FENETRE
+FENETRE -down- "0,N" STATION
+
+SATELLITE "0,N" -right- PARTICIPATION
+PARTICIPATION -right- "0,N" MISSION
+
+STATION "0,N" -right- AFFECTATION
+AFFECTATION -right- "1,N" CENTRE
+
+' ============================================================
+' LEGENDE
+' ============================================================
+
+legend bottom left
+  |= Symbole |= Signification |
+  | Rectangle bleu | Entité |
+  | Losange orange | Association |
+  | <u>souligné</u> | Identifiant (PK) |
+  | **0,N / 1,1** | Cardinalités |
+  | //(nullable)// | Attribut facultatif |
+  Les attributs sous les losanges sont **portés par l'association**.
+  FENETRE_COM possède un identifiant propre (entité-association).
+end legend
+
+@enduml
