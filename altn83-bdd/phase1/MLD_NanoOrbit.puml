@@ -1,0 +1,164 @@
+@startuml MLD_NanoOrbit
+!theme plain
+skinparam linetype ortho
+skinparam backgroundColor #FFFFFF
+skinparam roundcorner 5
+
+skinparam class {
+  BackgroundColor #E8EEF9
+  BorderColor #2C3E7A
+  HeaderBackgroundColor #2C3E7A
+  HeaderFontColor #FFFFFF
+  FontSize 12
+  AttributeFontSize 11
+}
+
+hide circle
+hide methods
+
+title
+  <b><size:20>MLD NanoOrbit — Schéma Relationnel</size></b>
+  <size:13>Projet ALTN83 — 10 tables — Oracle 23ai</size>
+end title
+
+' ============================================================
+' TABLES
+' ============================================================
+
+class "ORBITE" as ORBITE {
+  <b><u>id_orbite</u></b> : VARCHAR2(20) <<PK>>
+  nom_orbite : VARCHAR2(100) NOT NULL
+  type_orbite : VARCHAR2(10) NOT NULL <<CHECK>>
+  altitude : NUMBER(7,2) NOT NULL
+  inclinaison : NUMBER(5,2) NOT NULL
+  periode : NUMBER(7,2) NOT NULL
+  ..
+  <i>UNIQUE (altitude, inclinaison)</i>
+  <i>CHECK type_orbite IN ('SSO','LEO','MEO','GEO')</i>
+}
+
+class "SATELLITE" as SATELLITE {
+  <b><u>id_satellite</u></b> : VARCHAR2(20) <<PK>>
+  nom_satellite : VARCHAR2(100) NOT NULL
+  format_cubesat : VARCHAR2(3) NOT NULL <<CHECK>>
+  date_lancement : DATE NOT NULL
+  statut_actuel : VARCHAR2(30) NOT NULL <<CHECK>>
+  capacite_batterie : NUMBER(5,2) NOT NULL
+  <b>#id_orbite</b> : VARCHAR2(20) NOT NULL <<FK>>
+  ..
+  <i>CHECK format_cubesat IN ('1U','3U','6U','12U')</i>
+  <i>CHECK statut_actuel IN ('Opérationnel',</i>
+  <i>  'En veille','Défaillant','Désorbité')</i>
+}
+
+class "INSTRUMENT" as INSTRUMENT {
+  <b><u>id_instrument</u></b> : VARCHAR2(20) <<PK>>
+  nom_instrument : VARCHAR2(100) NOT NULL
+  type_instrument : VARCHAR2(50) NOT NULL
+  resolution : NUMBER(10,2) NOT NULL
+  fabricant : VARCHAR2(100) NOT NULL
+}
+
+class "EMBARQUEMENT" as EMBARQUEMENT {
+  <b><u>#id_satellite</u></b> : VARCHAR2(20) <<PK,FK>>
+  <b><u>#id_instrument</u></b> : VARCHAR2(20) <<PK,FK>>
+  date_integration : DATE NOT NULL
+  etat_fonctionnement : VARCHAR2(20) NOT NULL <<CHECK>>
+  ..
+  <i>CHECK etat_fonctionnement</i>
+  <i>  IN ('Actif','Dégradé','Inactif')</i>
+}
+
+class "CENTRE_CONTROLE" as CENTRE {
+  <b><u>id_centre</u></b> : VARCHAR2(20) <<PK>>
+  nom_centre : VARCHAR2(100) NOT NULL
+  ville : VARCHAR2(100) NOT NULL
+  pays : VARCHAR2(100) NOT NULL
+  fuseau_horaire : VARCHAR2(50) NOT NULL
+}
+
+class "STATION_SOL" as STATION {
+  <b><u>id_station</u></b> : VARCHAR2(20) <<PK>>
+  nom_station : VARCHAR2(100) NOT NULL
+  latitude : NUMBER(9,6) NOT NULL
+  longitude : NUMBER(9,6) NOT NULL
+  debit_max : NUMBER(10,2) NOT NULL
+  statut_station : VARCHAR2(20) NOT NULL <<CHECK>>
+  ..
+  <i>CHECK statut_station</i>
+  <i>  IN ('Active','Maintenance','Inactive')</i>
+}
+
+class "AFFECTATION_STATION" as AFFECTATION {
+  <b><u>#id_centre</u></b> : VARCHAR2(20) <<PK,FK>>
+  <b><u>#id_station</u></b> : VARCHAR2(20) <<PK,FK>>
+  date_affectation : DATE NOT NULL
+}
+
+class "MISSION" as MISSION {
+  <b><u>id_mission</u></b> : VARCHAR2(20) <<PK>>
+  nom_mission : VARCHAR2(100) NOT NULL
+  date_debut : DATE NOT NULL
+  date_fin : DATE  //(nullable — RG-M01)//
+  statut_mission : VARCHAR2(20) NOT NULL <<CHECK>>
+  zone_cible : VARCHAR2(200) NOT NULL
+  objectif : VARCHAR2(500) NOT NULL
+  ..
+  <i>CHECK statut_mission</i>
+  <i>  IN ('Active','Terminée','Planifiée')</i>
+}
+
+class "FENETRE_COM" as FENETRE {
+  <b><u>id_fenetre</u></b> : VARCHAR2(20) <<PK>>
+  <b>#id_satellite</b> : VARCHAR2(20) NOT NULL <<FK>>
+  <b>#id_station</b> : VARCHAR2(20) NOT NULL <<FK>>
+  datetime_debut : TIMESTAMP NOT NULL
+  duree : NUMBER(4) NOT NULL <<CHECK>>
+  statut_fenetre : VARCHAR2(20) NOT NULL <<CHECK>>
+  volume_donnees : NUMBER(12,2)  //(nullable — RG-F05)//
+  ..
+  <i>CHECK duree BETWEEN 1 AND 900</i>
+  <i>CHECK statut_fenetre</i>
+  <i>  IN ('Planifiée','Réalisée','Annulée')</i>
+}
+
+class "PARTICIPATION" as PARTICIPATION {
+  <b><u>#id_satellite</u></b> : VARCHAR2(20) <<PK,FK>>
+  <b><u>#id_mission</u></b> : VARCHAR2(20) <<PK,FK>>
+  role_satellite : VARCHAR2(100) NOT NULL
+}
+
+' ============================================================
+' RELATIONS (FK)
+' ============================================================
+
+ORBITE "1" -down- "0..*" SATELLITE : id_orbite
+
+SATELLITE "1" -down- "0..*" EMBARQUEMENT : id_satellite
+INSTRUMENT "1" -down- "0..*" EMBARQUEMENT : id_instrument
+
+SATELLITE "1" -down- "0..*" FENETRE : id_satellite
+STATION "1" -right- "0..*" FENETRE : id_station
+
+SATELLITE "1" -down- "0..*" PARTICIPATION : id_satellite
+MISSION "1" -left- "0..*" PARTICIPATION : id_mission
+
+CENTRE "1" -down- "0..*" AFFECTATION : id_centre
+STATION "1" -down- "0..*" AFFECTATION : id_station
+
+' ============================================================
+' LEGENDE
+' ============================================================
+
+legend bottom left
+  |= Notation |= Signification |
+  | <b><u>souligné gras</u></b> | Clé primaire (PK) |
+  | <b>#attribut</b> | Clé étrangère (FK) |
+  | <<PK,FK>> | PK composite + FK |
+  | NOT NULL | Attribut obligatoire |
+  | //(nullable)// | Attribut facultatif |
+  | <<CHECK>> | Contrainte de domaine |
+  Schéma en **3NF** — 10 tables — Oracle 23ai
+end legend
+
+@enduml
