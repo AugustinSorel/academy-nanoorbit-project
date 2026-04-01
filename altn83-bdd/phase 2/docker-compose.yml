@@ -1,0 +1,20 @@
+services:
+  oracle-db:
+    image: gvenzl/oracle-free:23.7-slim-faststart
+    container_name: bdd-oracle-projet-orbit
+    ports:
+      - "1521:1521"
+    environment:
+      # Mot de passe pour SYS, SYSTEM et PDBADMIN
+      - ORACLE_PASSWORD=Efrei_2026_VLS
+      # Optionnel : Créer un utilisateur spécifique dès le démarrage
+      - APP_USER=VLS_ADMIN
+      - APP_USER_PASSWORD=Admin_VLS_2026
+    volumes:
+      # Persistance des données (indispensable pour les TP)
+      - oracle_data:/opt/oracle/oradata
+      # Optionnel : Vos scripts SQL de création (Séance 1)
+      - ./scripts:/opt/oracle/scripts/startup
+
+volumes:
+  oracle_data:
