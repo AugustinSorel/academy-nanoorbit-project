@@ -4,27 +4,23 @@ process.loadEnvFile(new URL('../.env', import.meta.url))
 
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
-import { getPool } from './db.js'
+import satellites from './routes/satellites.js'
+import orbites from './routes/orbites.js'
+import instruments from './routes/instruments.js'
+import missions from './routes/missions.js'
+import stations from './routes/stations.js'
+import fenetres from './routes/fenetres.js'
+import stats from './routes/stats.js'
 
 const app = new Hono()
 
-app.get('/', (c) => {
-  return c.json({ message: 'Hello World' })
-})
-
-app.get('/db-test', async (c) => {
-  const pool = await getPool()
-  const conn = await pool.getConnection()
-  try {
-    const result = await conn.execute<[string]>(
-      `SELECT 'Oracle connection OK — ' || SYS_CONTEXT('USERENV','SESSION_USER') AS status FROM DUAL`
-    )
-    const status = result.rows?.[0][0]
-    return c.json({ status })
-  } finally {
-    await conn.close()
-  }
-})
+app.route('/satellites', satellites)
+app.route('/orbites', orbites)
+app.route('/instruments', instruments)
+app.route('/missions', missions)
+app.route('/stations', stations)
+app.route('/fenetres', fenetres)
+app.route('/stats', stats)
 
 serve({ fetch: app.fetch, port: 3000 }, (info) => {
   console.log(`Server running at http://localhost:${info.port}`)
