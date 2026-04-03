@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     kotlin("kapt") // annotation processing pour Room
-}
+    }
 
 android {
     namespace = "com.example.myapplication"
