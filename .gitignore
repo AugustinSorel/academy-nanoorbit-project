@@ -42,3 +42,4 @@ GROUPE_*/
 *~
 
 node_modules
+.env

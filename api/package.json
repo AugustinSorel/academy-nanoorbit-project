@@ -14,10 +14,12 @@
   "type": "module",
   "dependencies": {
     "@hono/node-server": "^1.19.12",
-    "hono": "^4.12.10"
+    "hono": "^4.12.10",
+    "oracledb": "^6.10.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "@types/oracledb": "^6.10.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }
