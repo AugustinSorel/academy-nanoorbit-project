@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.example.myapplication.ui.screen.DashboardScreen
+import com.example.myapplication.ui.navigation.AppNavHost
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -13,8 +13,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                // Phase 3 : remplacer par NavHost avec BottomNavigationBar
-                DashboardScreen()
+                // Phase 3 : NavHost avec BottomNavigationBar (Dashboard, Planning, Carte)
+                AppNavHost()
             }
         }
     }

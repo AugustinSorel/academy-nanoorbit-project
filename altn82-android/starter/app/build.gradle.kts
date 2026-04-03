@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    kotlin("kapt") // annotation processing pour Room
 }
 
 android {
@@ -68,4 +69,19 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 // Asynchronous HTTP client
     implementation("com.squareup.okhttp3:okhttp:4.9.1")
+
+    // Navigation Compose (Phase 3 — L3-A)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // Room — persistance locale Cache-First (Phase 3 — L3-D)
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
+
+    // osmdroid — cartographie OpenStreetMap (Phase 3 — L3-E)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
+    // Location GPS (Phase 3 — L3-E)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 }
