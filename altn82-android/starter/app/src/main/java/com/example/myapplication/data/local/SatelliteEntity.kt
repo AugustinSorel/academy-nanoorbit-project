@@ -6,26 +6,31 @@ import com.example.myapplication.data.model.Satellite
 import com.example.myapplication.data.model.StatutSatellite
 
 /**
- * Entité Room — miroir de la table SATELLITE Oracle.
+ * Entité Room — cache local de la constellation.
  *
- * Tous les champs de la data class Satellite sont persistés.
- * - Date stockée en epoch ms (Long) pour Room.
- * - StatutSatellite stocké en String et reconverti à la lecture.
- * - lastUpdated : horodatage de la dernière mise à jour réseau (stratégie Cache-First).
+ * Le schéma reflète l'union des deux sources de l'API :
+ *   - Vue v_satellites_operationnels : orbite (string), nbInstruments
+ *   - Table SATELLITE : statut, idOrbite, masse, dureeViePrevue, dateLancement
+ * Tous les champs spécifiques à une source sont nullable.
  *
- * Phase 3 — L3-D
+ * Version 2 : champs nullable pour compatibilité vue + table de base.
+ * fallbackToDestructiveMigration() configuré dans NanoOrbitDatabase.
+ *
+ * Phase 3 — L3-D / refactoring routes
  */
 @Entity(tableName = "satellites")
 data class SatelliteEntity(
     @PrimaryKey val idSatellite: String,
     val nomSatellite: String,
-    val statut: String,           // StatutSatellite.name stocké en String
     val formatCubesat: String,
-    val idOrbite: String,
-    val masse: Double,
-    val dureeViePrevue: Int,
     val capaciteBatterie: Double,
-    val dateLancement: Long,      // epoch ms — oracle: DATE non-null
+    val statut: String? = null,         // StatutSatellite.name, null si source = vue
+    val idOrbite: String? = null,       // null si source = vue
+    val masse: Double? = null,          // null si source = vue
+    val dureeViePrevue: Int? = null,    // null si source = vue
+    val dateLancement: Long? = null,    // epoch ms, null si source = vue
+    val orbite: String? = null,         // string orbite de la vue, null si source = table
+    val nbInstruments: Int? = null,     // null si source = table
     val lastUpdated: Long = System.currentTimeMillis()
 )
 
@@ -34,23 +39,29 @@ data class SatelliteEntity(
 fun Satellite.toEntity() = SatelliteEntity(
     idSatellite      = idSatellite,
     nomSatellite     = nomSatellite,
-    statut           = statut.name,
     formatCubesat    = formatCubesat,
+    capaciteBatterie = capaciteBatterie,
+    statut           = statut?.name,
     idOrbite         = idOrbite,
     masse            = masse,
     dureeViePrevue   = dureeViePrevue,
-    capaciteBatterie = capaciteBatterie,
-    dateLancement    = dateLancement.time
+    dateLancement    = dateLancement?.time,
+    orbite           = orbite,
+    nbInstruments    = nbInstruments
 )
 
 fun SatelliteEntity.toDomain() = Satellite(
     idSatellite      = idSatellite,
     nomSatellite     = nomSatellite,
-    statut           = StatutSatellite.valueOf(statut),
     formatCubesat    = formatCubesat,
+    capaciteBatterie = capaciteBatterie,
+    statut           = statut?.let {
+        try { StatutSatellite.valueOf(it) } catch (_: IllegalArgumentException) { null }
+    },
     idOrbite         = idOrbite,
     masse            = masse,
     dureeViePrevue   = dureeViePrevue,
-    capaciteBatterie = capaciteBatterie,
-    dateLancement    = java.util.Date(dateLancement)
+    dateLancement    = dateLancement?.let { java.util.Date(it) },
+    orbite           = orbite,
+    nbInstruments    = nbInstruments
 )

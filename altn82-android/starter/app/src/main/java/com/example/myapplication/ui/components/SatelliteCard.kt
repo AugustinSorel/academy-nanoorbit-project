@@ -43,10 +43,12 @@ fun SatelliteCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDesorbite = satellite.statut == StatutSatellite.DESORBITE
+    // statut null → vue opérationnelle (tous les satellites listés sont opérationnels)
+    val effectiveStatut = satellite.statut ?: StatutSatellite.OPERATIONNEL
+    val isDesorbite = effectiveStatut == StatutSatellite.DESORBITE
     val cardAlpha = if (isDesorbite) 0.55f else 1f
 
-    val dotColor = when (satellite.statut) {
+    val dotColor = when (effectiveStatut) {
         StatutSatellite.OPERATIONNEL -> Color(0xFF4CAF50)
         StatutSatellite.EN_VEILLE    -> Color(0xFFFF9800)
         StatutSatellite.DEFAILLANT   -> Color(0xFFF44336)
@@ -81,18 +83,20 @@ fun SatelliteCard(
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f)
                     )
-                    StatusBadge(statut = satellite.statut)
+                    StatusBadge(statut = effectiveStatut)
                 }
 
+                // idOrbite (table) ou orbite (vue) selon la source de données
+                val orbitLabel = satellite.idOrbite ?: satellite.orbite ?: "-"
                 Text(
-                    text = "${satellite.formatCubesat}  •  ${satellite.idOrbite}  •  ${satellite.idSatellite}",
+                    text = "${satellite.formatCubesat}  •  $orbitLabel  •  ${satellite.idSatellite}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
                 )
 
                 // Bandeau DÉSORBITÉ visible uniquement pour ce statut
-                if (isDesorbite) {
+                if (effectiveStatut == StatutSatellite.DESORBITE) {
                     Text(
                         text = "DÉSORBITÉ — Aucune fenêtre ni mission possible (RG-S06)",
                         style = MaterialTheme.typography.labelSmall,

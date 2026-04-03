@@ -1,8 +1,13 @@
 package com.example.myapplication.data.model
 
+import com.google.gson.annotations.SerializedName
+
 /**
  * Enum miroir de la contrainte CHECK Oracle sur SATELLITE.statut_actuel.
  * Valeurs Oracle : 'Opérationnel' | 'En veille' | 'Défaillant' | 'Désorbité'
+ *
+ * @SerializedName mappe les valeurs French de l'API Oracle vers les constantes Kotlin.
+ * Gson respecte ces annotations à la désérialisation, ce qui évite un deserializer custom.
  *
  * Q2 — Pourquoi une enum class plutôt qu'une String libre ?
  * Une enum garantit l'exhaustivité à la compilation : le compilateur Kotlin oblige à traiter
@@ -19,8 +24,12 @@ package com.example.myapplication.data.model
  * l'intégrité même en cas d'appel API direct.
  */
 enum class StatutSatellite(val displayName: String) {
+    @SerializedName("Opérationnel")
     OPERATIONNEL("Opérationnel"),
+    @SerializedName("En veille")
     EN_VEILLE("En veille"),
+    @SerializedName("Défaillant")
     DEFAILLANT("Défaillant"),
+    @SerializedName("Désorbité")
     DESORBITE("Désorbité")
 }

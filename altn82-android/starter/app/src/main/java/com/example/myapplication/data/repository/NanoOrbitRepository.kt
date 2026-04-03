@@ -4,13 +4,11 @@ import com.example.myapplication.data.local.NanoOrbitDao
 import com.example.myapplication.data.local.toEntity
 import com.example.myapplication.data.local.toDomain
 import com.example.myapplication.data.model.FenetreCom
-import com.example.myapplication.data.model.Instrument
+import com.example.myapplication.data.model.Mission
 import com.example.myapplication.data.model.Satellite
-import com.example.myapplication.data.model.mockFenetres
-import com.example.myapplication.data.model.mockInstruments
-import com.example.myapplication.data.model.mockSatellites
+import com.example.myapplication.data.model.SatelliteDetail
+import com.example.myapplication.data.model.StationSol
 import com.example.myapplication.data.remote.NanoOrbitApi
-import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
 
 /**
@@ -24,18 +22,18 @@ import java.util.concurrent.TimeUnit
  *
  * Synergie ALTN83 Q3 : cette stratégie répond directement à la question
  * "Comment Singapour peut-il continuer à planifier si le serveur central est indisponible ?"
- * Room joue le rôle de miroir local de la base Oracle, exactement comme demandé en Q3.
- * Commenté dans NanoOrbitDatabase.kt (lien explicite ALTN83).
+ * Room joue le rôle de miroir local de la base Oracle.
  *
  * Validation RG-F04 — durée fenêtre [1, 900] secondes.
- * Miroir du trigger Oracle T3 (Phase 2 ALTN83) :
- *   TRIGGER T1_FENETRE_DUREE BEFORE INSERT OR UPDATE ON FENETRE_COM
- *   FOR EACH ROW BEGIN
- *     IF :NEW.duree < 1 OR :NEW.duree > 900 THEN
- *       RAISE_APPLICATION_ERROR(-20001, 'RG-F04 : durée hors bornes [1,900]');
- *     END IF;
- *   END;
- * Côté Android : validation préventive avant envoi réseau pour retour immédiat.
+ * Miroir du trigger Oracle T3 côté Android : validation préventive avant envoi réseau.
+ *
+ * Routes couvertes :
+ *   GET /satellites          → getSatellites()
+ *   GET /satellites/:id      → getSatelliteDetail()
+ *   GET /fenetres            → getFenetres()
+ *   GET /stations            → getStations()
+ *   GET /missions            → getMissions()
+ *   PATCH /satellites/:id/statut → updateSatelliteStatut()
  */
 class NanoOrbitRepository(
     private val api: NanoOrbitApi,
@@ -51,47 +49,64 @@ class NanoOrbitRepository(
         val lastUpdated: Long? = null
     )
 
+    // ── Satellites ───────────────────────────────────────────────────────────
+
     /**
-     * Récupère les satellites selon la stratégie Cache-First.
-     *
-     * Phase 3 : lit Room d'abord, tente la mise à jour réseau, fallback cache si KO.
+     * Récupère la liste des satellites selon la stratégie Cache-First.
+     * Sans filtre : utilise la vue v_satellites_operationnels (champs allégés).
      */
     suspend fun getSatellites(): CacheResult<List<Satellite>> {
         val cached = dao.getAllSatellites()
         val lastUpdated = dao.getLastUpdated()
 
         return try {
-            delay(500) // simulation latence — à supprimer avec vraie API
-            // TODO Phase réelle : val fresh = api.getSatellites()
-            val fresh = mockSatellites
+            val fresh = api.getSatellites()
             dao.upsertSatellites(fresh.map { it.toEntity() })
             CacheResult(data = fresh, isOffline = false, lastUpdated = System.currentTimeMillis())
         } catch (e: Exception) {
             if (cached.isNotEmpty()) {
-                // Fallback cache : données locales disponibles, on reste hors-ligne
                 CacheResult(
                     data = cached.map { it.toDomain() },
                     isOffline = true,
                     lastUpdated = lastUpdated
                 )
             } else {
-                // Cache vide ET réseau KO : l'erreur doit remonter au ViewModel
                 throw e
             }
         }
     }
 
     /**
-     * Récupère les fenêtres des 7 prochains jours — Cache-First.
+     * Détail complet d'un satellite : instruments, missions, fenêtres récentes.
+     * Source : GET /satellites/:id — pas de cache Room (données fraîches requises).
      */
-    suspend fun getFenetres(): CacheResult<List<FenetreCom>> {
+    suspend fun getSatelliteDetail(id: String): SatelliteDetail = api.getSatelliteDetail(id)
+
+    /**
+     * Met à jour le statut d'un satellite via PATCH /satellites/:id/statut.
+     * @return le nouveau statut confirmé par le serveur.
+     */
+    suspend fun updateSatelliteStatut(id: String, statut: String): String {
+        val response = api.updateSatelliteStatut(id, mapOf("statut" to statut))
+        return response["statut"] ?: statut
+    }
+
+    // ── Fenêtres de communication ─────────────────────────────────────────────
+
+    /**
+     * Récupère les fenêtres des 7 prochains jours — Cache-First.
+     * Source : vue v_fenetres_detail (champs enrichis : nomSatellite, nomStation…).
+     */
+    suspend fun getFenetres(
+        statut: String? = null,
+        satellite: String? = null,
+        station: String? = null
+    ): CacheResult<List<FenetreCom>> {
         val sevenDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7)
         val cached = dao.getUpcomingFenetres(sevenDaysAgo)
 
         return try {
-            delay(400)
-            // TODO Phase réelle : val fresh = api.getFenetres()
-            val fresh = mockFenetres
+            val fresh = api.getFenetres(statut, satellite, station)
             dao.upsertFenetres(fresh.map { it.toEntity() })
             CacheResult(data = fresh, isOffline = false)
         } catch (e: Exception) {
@@ -103,11 +118,22 @@ class NanoOrbitRepository(
         }
     }
 
-    /** Instruments d'un satellite (pas de cache Room en Phase 3). */
-    suspend fun getInstruments(satelliteId: String): List<Instrument> {
-        delay(300)
-        return mockInstruments
-    }
+    // ── Stations sol ─────────────────────────────────────────────────────────
+
+    /**
+     * Liste les stations sol depuis GET /stations.
+     * Pas de cache Room — les stations sont peu nombreuses et rarement modifiées.
+     */
+    suspend fun getStations(statut: String? = null): List<StationSol> =
+        api.getStations(statut)
+
+    // ── Missions ─────────────────────────────────────────────────────────────
+
+    /** Liste les missions depuis GET /missions. */
+    suspend fun getMissions(statut: String? = null): List<Mission> =
+        api.getMissions(statut)
+
+    // ── Validation métier ─────────────────────────────────────────────────────
 
     /**
      * Validation RG-F04 — durée [1, 900] secondes.

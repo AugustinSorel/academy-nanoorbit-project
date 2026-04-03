@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.data.model.mockStations
 import com.example.myapplication.ui.components.FenetreCard
 import com.example.myapplication.ui.viewmodel.NanoOrbitViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -54,6 +53,7 @@ fun PlanningScreen(
 ) {
     val fenetres        by vm.filteredFenetres.collectAsState()
     val selectedStation by vm.selectedStation.collectAsState()
+    val stations        by vm.stations.collectAsState()
 
     // Calcul des totaux
     val totalDureeMin = fenetres.sumOf { it.duree } / 60
@@ -103,7 +103,7 @@ fun PlanningScreen(
                         label    = { Text("Toutes") }
                     )
                 }
-                items(mockStations) { station ->
+                items(stations) { station ->
                     FilterChip(
                         selected = selectedStation == station.codeStation,
                         onClick  = { vm.onStationChange(station.codeStation) },
@@ -153,9 +153,10 @@ fun PlanningScreen(
                     items(fenetres, key = { it.idFenetre }) { fenetre ->
                         FenetreCard(
                             fenetre    = fenetre,
-                            nomStation = mockStations
-                                .find { it.codeStation == fenetre.codeStation }
-                                ?.nomStation ?: fenetre.codeStation
+                            // nomStation : vue API (enrichie) > lookup stations > codeStation
+                            nomStation = fenetre.nomStation
+                                ?: stations.find { it.codeStation == fenetre.codeStation }?.nomStation
+                                ?: fenetre.codeStation
                         )
                     }
                 }

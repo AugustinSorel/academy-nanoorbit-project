@@ -71,7 +71,10 @@ fun DashboardScreen(
     val selectedStatut  by vm.selectedStatut.collectAsState()
 
     val totalCount        = satellites.size
-    val operationnelCount = satellites.count { it.statut == StatutSatellite.OPERATIONNEL }
+    // statut null → vue opérationnelle : tous les items sont opérationnels par définition
+    val operationnelCount = satellites.count {
+        it.statut == StatutSatellite.OPERATIONNEL || it.statut == null
+    }
 
     Scaffold(
         topBar = {
@@ -274,9 +277,26 @@ private fun PreviewDashboard() {
         }
         val fakeRepository = com.example.myapplication.data.repository.NanoOrbitRepository(
             api = object : com.example.myapplication.data.remote.NanoOrbitApi {
-                override suspend fun getSatellites() = com.example.myapplication.data.model.mockSatellites
-                override suspend fun getInstruments(satelliteId: String) = emptyList<com.example.myapplication.data.model.Instrument>()
-                override suspend fun getFenetres() = emptyList<com.example.myapplication.data.model.FenetreCom>()
+                override suspend fun getSatellites(statut: String?) =
+                    com.example.myapplication.data.model.mockSatellites
+                override suspend fun getSatelliteDetail(id: String) =
+                    com.example.myapplication.data.model.SatelliteDetail(
+                        idSatellite = id, nomSatellite = id, dateLancement = null,
+                        masse = null, formatCubesat = "-", statut = null,
+                        dureeViePrevue = null, capaciteBatterie = 0.0,
+                        idOrbite = null, typeOrbite = null, altitude = null,
+                        inclinaison = null, periodeOrbitale = null, zoneCouverture = null
+                    )
+                override suspend fun updateSatelliteStatut(id: String, body: Map<String, String>) =
+                    emptyMap<String, String>()
+                override suspend fun getFenetres(statut: String?, satellite: String?, station: String?) =
+                    emptyList<com.example.myapplication.data.model.FenetreCom>()
+                override suspend fun getStations(statut: String?) =
+                    com.example.myapplication.data.model.mockStations
+                override suspend fun getMissions(statut: String?) =
+                    emptyList<com.example.myapplication.data.model.Mission>()
+                override suspend fun getOrbites() =
+                    emptyList<com.example.myapplication.data.model.Orbite>()
             },
             dao = fakeDao
         )
