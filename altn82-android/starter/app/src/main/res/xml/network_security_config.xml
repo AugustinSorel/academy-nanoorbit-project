@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Politique réseau — développement local uniquement.
+    Autorise le trafic HTTP (cleartext) vers :
+      - localhost    : utile si l'API tourne sur l'appareil lui-même
+      - 10.0.2.2    : adresse de la machine hôte vue depuis l'émulateur Android
+      - 10.0.3.2    : adresse hôte pour Genymotion
+    Le trafic vers tous les autres domaines reste HTTPS obligatoire.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">10.0.3.2</domain>
+    </domain-config>
+</network-security-config>
