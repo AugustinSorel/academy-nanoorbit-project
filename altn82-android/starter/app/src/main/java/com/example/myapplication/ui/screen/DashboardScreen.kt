@@ -11,14 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -49,9 +50,12 @@ import org.koin.androidx.compose.koinViewModel
  */
 
 /**
- * Écran principal — liste de tous les satellites avec recherche temps réel.
+ * Écran principal — Phase 2.
  *
- * @param vm           injecté automatiquement par Koin via koinViewModel()
+ * Connecté au ViewModel via collectAsStateWithLifecycle (lifecycle-aware).
+ * Délègue tous les événements au ViewModel : pas d'appel réseau direct depuis le composable.
+ *
+ * @param vm               injecté automatiquement par Koin via koinViewModel()
  * @param onSatelliteClick callback de navigation vers DetailScreen (Phase 3)
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,13 +64,14 @@ fun DashboardScreen(
     vm: NanoOrbitViewModel = koinViewModel(),
     onSatelliteClick: (String) -> Unit = {}
 ) {
-    val satellites     by vm.filteredSatellites.collectAsState()
-    val isLoading      by vm.isLoading.collectAsState()
-    val errorMessage   by vm.errorMessage.collectAsState()
-    val searchQuery    by vm.searchQuery.collectAsState()
+    val satellites      by vm.filteredSatellites.collectAsState()
+    val isLoading       by vm.isLoading.collectAsState()
+    val errorMessage    by vm.errorMessage.collectAsState()
+    val searchQuery     by vm.searchQuery.collectAsState()
+    val selectedStatut  by vm.selectedStatut.collectAsState()
 
-    val totalCount         = satellites.size
-    val operationnelCount  = satellites.count { it.statut == StatutSatellite.OPERATIONNEL }
+    val totalCount        = satellites.size
+    val operationnelCount = satellites.count { it.statut == StatutSatellite.OPERATIONNEL }
 
     Scaffold(
         topBar = {
@@ -110,7 +115,33 @@ fun DashboardScreen(
                 shape = MaterialTheme.shapes.medium
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── Filtres par statut (Phase 2 — Étape 5) ─────────────────────
+            // FilterChip "Tous" + un chip par valeur de StatutSatellite.
+            // Le chip actif est surligné (selected = true).
+            // Le filtre s'applique en combinaison avec la recherche textuelle (dans le ViewModel).
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedStatut == null,
+                        onClick = { vm.onStatutFilterChange(null) },
+                        label = { Text("Tous") }
+                    )
+                }
+                items(StatutSatellite.values().toList()) { statut ->
+                    FilterChip(
+                        selected = selectedStatut == statut,
+                        onClick = { vm.onStatutFilterChange(statut) },
+                        label = { Text(statut.displayName) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
 
             // ── Compteur ────────────────────────────────────────────────────
             if (!isLoading && errorMessage == null) {
@@ -124,7 +155,8 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (searchQuery.isNotBlank()) {
+                    // Compteur "{n} résultat(s)" mis à jour en temps réel
+                    if (searchQuery.isNotBlank() || selectedStatut != null) {
                         Text(
                             text = "$totalCount résultat(s)",
                             style = MaterialTheme.typography.labelSmall,
@@ -176,20 +208,24 @@ fun DashboardScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = vm::loadSatellites) {
+                            // Bouton Réessayer appelle refreshSatellites() dans le ViewModel
+                            Button(onClick = vm::refreshSatellites) {
                                 Text("Réessayer")
                             }
                         }
                     }
                 }
 
-                satellites.isEmpty() && searchQuery.isNotBlank() -> {
+                satellites.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Aucun satellite trouvé pour « $searchQuery »",
+                            text = if (searchQuery.isNotBlank() || selectedStatut != null)
+                                "Aucun satellite ne correspond aux filtres actifs."
+                            else
+                                "Aucun satellite disponible.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -227,8 +263,16 @@ fun DashboardScreen(
 @Composable
 private fun PreviewDashboard() {
     MyApplicationTheme {
-        // Preview statique sans Koin : on passe les données directement
-        val vm = NanoOrbitViewModel()
+        // Preview statique sans Koin.
+        // On instancie un repository factice (mock) et un ViewModel directement.
+        val fakeRepository = com.example.myapplication.data.repository.NanoOrbitRepository(
+            api = object : com.example.myapplication.data.remote.NanoOrbitApi {
+                override suspend fun getSatellites() = com.example.myapplication.data.model.mockSatellites
+                override suspend fun getInstruments(satelliteId: String) = emptyList<com.example.myapplication.data.model.Instrument>()
+                override suspend fun getFenetres() = emptyList<com.example.myapplication.data.model.FenetreCom>()
+            }
+        )
+        val vm = NanoOrbitViewModel(repository = fakeRepository)
         DashboardScreen(vm = vm)
     }
 }
