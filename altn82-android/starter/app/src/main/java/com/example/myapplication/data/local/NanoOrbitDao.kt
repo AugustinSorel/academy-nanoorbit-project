@@ -1,16 +1,13 @@
 package com.example.myapplication.data.local
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 
 /**
  * DAO — accès aux tables Room de NanoOrbit.
  *
  * Toutes les opérations sont suspendues (coroutines) pour ne jamais bloquer le thread principal.
- * Note : @Insert(onConflict = REPLACE) remplace @Upsert — comportement identique,
- * compatible avec Room 2.6.x + KSP + Kotlin 2.x (bug @Upsert sur type de retour Unit).
  * Phase 3 — L3-D
  */
 @Dao
@@ -25,8 +22,8 @@ interface NanoOrbitDao {
     @Query("SELECT MAX(lastUpdated) FROM satellites")
     suspend fun getLastUpdated(): Long?
 
-    /** INSERT ou REPLACE — équivalent fonctionnel à Upsert. */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    /** INSERT ou UPDATE (upsert) — utilisé lors de la mise à jour réseau. */
+    @Upsert
     suspend fun upsertSatellites(satellites: List<SatelliteEntity>)
 
     // ── Fenêtres de communication ────────────────────────────────────────────
@@ -35,6 +32,6 @@ interface NanoOrbitDao {
     @Query("SELECT * FROM fenetres_com WHERE datetimeDebut >= :fromEpoch ORDER BY datetimeDebut ASC")
     suspend fun getUpcomingFenetres(fromEpoch: Long): List<FenetreEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertFenetres(fenetres: List<FenetreEntity>)
 }

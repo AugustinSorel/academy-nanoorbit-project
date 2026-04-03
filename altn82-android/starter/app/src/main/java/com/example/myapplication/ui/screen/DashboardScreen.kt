@@ -24,7 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -41,7 +40,6 @@ import com.example.myapplication.ui.components.SatelliteCard
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.ui.viewmodel.NanoOrbitViewModel
 import org.koin.androidx.compose.koinViewModel
-import java.util.concurrent.TimeUnit
 
 /*
  * Q1 — LazyColumn vs Column
@@ -52,11 +50,10 @@ import java.util.concurrent.TimeUnit
  */
 
 /**
- * Écran principal — Phase 2 + Phase 3.
+ * Écran principal — Phase 2.
  *
- * Connecté au ViewModel via collectAsState.
+ * Connecté au ViewModel via collectAsStateWithLifecycle (lifecycle-aware).
  * Délègue tous les événements au ViewModel : pas d'appel réseau direct depuis le composable.
- * Phase 3 : bannière hors-ligne si les données proviennent du cache Room (L3-D).
  *
  * @param vm               injecté automatiquement par Koin via koinViewModel()
  * @param onSatelliteClick callback de navigation vers DetailScreen (Phase 3)
@@ -72,8 +69,6 @@ fun DashboardScreen(
     val errorMessage    by vm.errorMessage.collectAsState()
     val searchQuery     by vm.searchQuery.collectAsState()
     val selectedStatut  by vm.selectedStatut.collectAsState()
-    val isOffline       by vm.isOffline.collectAsState()
-    val lastUpdated     by vm.lastUpdated.collectAsState()
 
     val totalCount        = satellites.size
     val operationnelCount = satellites.count { it.statut == StatutSatellite.OPERATIONNEL }
@@ -101,25 +96,6 @@ fun DashboardScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
         ) {
-
-            // ── Bannière hors-ligne (Cache-First — L3-D) ────────────────────
-            if (isOffline) {
-                val ageMin = lastUpdated?.let {
-                    TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - it)
-                }
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.tertiaryContainer
-                ) {
-                    Text(
-                        text = if (ageMin != null) "Mode hors-ligne — Mis à jour il y a $ageMin min"
-                               else "Mode hors-ligne — données du cache",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -289,20 +265,12 @@ private fun PreviewDashboard() {
     MyApplicationTheme {
         // Preview statique sans Koin.
         // On instancie un repository factice (mock) et un ViewModel directement.
-        val fakeDao = object : com.example.myapplication.data.local.NanoOrbitDao {
-            override suspend fun getAllSatellites() = emptyList<com.example.myapplication.data.local.SatelliteEntity>()
-            override suspend fun getLastUpdated(): Long? = null
-            override suspend fun upsertSatellites(satellites: List<com.example.myapplication.data.local.SatelliteEntity>) {}
-            override suspend fun getUpcomingFenetres(fromEpoch: Long) = emptyList<com.example.myapplication.data.local.FenetreEntity>()
-            override suspend fun upsertFenetres(fenetres: List<com.example.myapplication.data.local.FenetreEntity>) {}
-        }
         val fakeRepository = com.example.myapplication.data.repository.NanoOrbitRepository(
             api = object : com.example.myapplication.data.remote.NanoOrbitApi {
                 override suspend fun getSatellites() = com.example.myapplication.data.model.mockSatellites
                 override suspend fun getInstruments(satelliteId: String) = emptyList<com.example.myapplication.data.model.Instrument>()
                 override suspend fun getFenetres() = emptyList<com.example.myapplication.data.model.FenetreCom>()
-            },
-            dao = fakeDao
+            }
         )
         val vm = NanoOrbitViewModel(repository = fakeRepository)
         DashboardScreen(vm = vm)
