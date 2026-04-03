@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    kotlin("kapt") // annotation processing pour Room
-    }
+    alias(libs.plugins.kotlin.ksp)
+}
 
 android {
     namespace = "com.example.myapplication"
@@ -64,20 +64,20 @@ dependencies {
 
     // RecyclerView
     implementation("androidx.recyclerview:recyclerview:1.3.0")
-// Network library
+    // Network library
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-// Asynchronous HTTP client
+    // Asynchronous HTTP client
     implementation("com.squareup.okhttp3:okhttp:4.9.1")
 
     // Navigation Compose (Phase 3 — L3-A)
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
     // Room — persistance locale Cache-First (Phase 3 — L3-D)
-    val roomVersion = "2.6.1"
+    val roomVersion = "2.7.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
 
     // osmdroid — cartographie OpenStreetMap (Phase 3 — L3-E)
     implementation("org.osmdroid:osmdroid-android:6.1.18")

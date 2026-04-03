@@ -265,12 +265,20 @@ private fun PreviewDashboard() {
     MyApplicationTheme {
         // Preview statique sans Koin.
         // On instancie un repository factice (mock) et un ViewModel directement.
+        val fakeDao = object : com.example.myapplication.data.local.NanoOrbitDao {
+            override suspend fun getAllSatellites() = emptyList<com.example.myapplication.data.local.SatelliteEntity>()
+            override suspend fun getLastUpdated(): Long? = null
+            override suspend fun upsertSatellites(satellites: List<com.example.myapplication.data.local.SatelliteEntity>) {}
+            override suspend fun getUpcomingFenetres(fromEpoch: Long) = emptyList<com.example.myapplication.data.local.FenetreEntity>()
+            override suspend fun upsertFenetres(fenetres: List<com.example.myapplication.data.local.FenetreEntity>) {}
+        }
         val fakeRepository = com.example.myapplication.data.repository.NanoOrbitRepository(
             api = object : com.example.myapplication.data.remote.NanoOrbitApi {
                 override suspend fun getSatellites() = com.example.myapplication.data.model.mockSatellites
                 override suspend fun getInstruments(satelliteId: String) = emptyList<com.example.myapplication.data.model.Instrument>()
                 override suspend fun getFenetres() = emptyList<com.example.myapplication.data.model.FenetreCom>()
-            }
+            },
+            dao = fakeDao
         )
         val vm = NanoOrbitViewModel(repository = fakeRepository)
         DashboardScreen(vm = vm)
