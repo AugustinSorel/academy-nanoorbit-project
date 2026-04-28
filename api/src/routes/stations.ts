@@ -3,7 +3,6 @@ import { getPool } from '../db.js'
 
 const stations = new Hono()
 
-// GET /stations — list all ground stations, optional ?statut= filter
 stations.get('/', async (c) => {
   const statut = c.req.query('statut')
   const pool = await getPool()
@@ -38,7 +37,6 @@ stations.get('/', async (c) => {
   }
 })
 
-// GET /stations/:code — single station with recent communication windows
 stations.get('/:code', async (c) => {
   const code = c.req.param('code')
   const pool = await getPool()

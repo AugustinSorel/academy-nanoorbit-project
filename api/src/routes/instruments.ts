@@ -3,7 +3,6 @@ import { getPool } from '../db.js'
 
 const instruments = new Hono()
 
-// GET /instruments — list all instruments
 instruments.get('/', async (c) => {
   const pool = await getPool()
   const conn = await pool.getConnection()
@@ -32,7 +31,6 @@ instruments.get('/', async (c) => {
   }
 })
 
-// GET /instruments/:ref — single instrument with the satellites carrying it
 instruments.get('/:ref', async (c) => {
   const ref = c.req.param('ref')
   const pool = await getPool()

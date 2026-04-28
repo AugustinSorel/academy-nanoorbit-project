@@ -3,9 +3,6 @@ import { getPool } from '../db.js'
 
 const stats = new Hono()
 
-// GET /stats/volumes — monthly download volumes by station and CubeSat format
-// Uses mv_volumes_mensuels (materialized view, refresh on demand)
-// Query params: ?station=, ?format=
 stats.get('/volumes', async (c) => {
   const station = c.req.query('station')
   const format = c.req.query('format')
@@ -47,7 +44,6 @@ stats.get('/volumes', async (c) => {
   }
 })
 
-// POST /stats/volumes/refresh — manually refresh the materialized view
 stats.post('/volumes/refresh', async (c) => {
   const pool = await getPool()
   const conn = await pool.getConnection()

@@ -3,7 +3,6 @@ import { getPool } from '../db.js'
 
 const orbites = new Hono()
 
-// GET /orbites — list all orbits
 orbites.get('/', async (c) => {
   const pool = await getPool()
   const conn = await pool.getConnection()
@@ -33,7 +32,6 @@ orbites.get('/', async (c) => {
   }
 })
 
-// GET /orbites/:id — single orbit with its satellites
 orbites.get('/:id', async (c) => {
   const id = c.req.param('id')
   const pool = await getPool()

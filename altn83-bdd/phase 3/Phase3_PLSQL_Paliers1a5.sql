@@ -1,30 +1,5 @@
--- ============================================================
--- PROJET NANOORBIT — PHASE 3 — PL/SQL Paliers 1 à 5
--- Module ALTN83 — Bases de Données Réparties
--- SGBD : Oracle 23ai — Schéma : NANOORBIT_ADMIN sur FREEPDB1
--- ============================================================
--- Exercices 1 à 16 — Blocs anonymes, curseurs, procédures, fonctions
--- Prérequis : Phase 2 complète (DDL + DML + Triggers)
--- ============================================================
-
 SET SERVEROUTPUT ON;
 
-
--- ############################################################
---  PALIER 1 — BLOC ANONYME
--- ############################################################
-
--- ============================================================
--- EXERCICE 1 : Message de bienvenue + comptages
--- Afficher un message de bienvenue et le nombre de satellites,
--- stations et missions de la base.
--- ============================================================
--- Résultat attendu :
---   === Bienvenue sur le système NanoOrbit ===
---   Nombre de satellites : 5
---   Nombre de stations   : 3
---   Nombre de missions   : 3
--- ============================================================
 DECLARE
     v_nb_satellites NUMBER;
     v_nb_stations   NUMBER;
@@ -41,20 +16,6 @@ BEGIN
 END;
 /
 
-
--- ============================================================
--- EXERCICE 2 : SELECT INTO — Caractéristiques de SAT-001
--- Récupérer et afficher les caractéristiques du satellite SAT-001.
--- ============================================================
--- Résultat attendu :
---   --- Satellite SAT-001 ---
---   Nom            : NanoOrbit-Alpha
---   Format         : 3U
---   Statut         : Opérationnel
---   Batterie       : 20 Wh
---   Orbite         : 1
---   Date lancement : 15/03/2022
--- ============================================================
 DECLARE
     v_id            SATELLITE.id_satellite%TYPE;
     v_nom           SATELLITE.nom_satellite%TYPE;
@@ -80,24 +41,6 @@ BEGIN
 END;
 /
 
-
--- ############################################################
---  PALIER 2 — VARIABLES ET TYPES
--- ############################################################
-
--- ============================================================
--- EXERCICE 3 : %ROWTYPE — Ligne complète de SATELLITE
--- Lire une ligne complète de SATELLITE avec %ROWTYPE et
--- afficher son statut et sa capacité batterie.
--- ============================================================
--- Résultat attendu :
---   --- Satellite SAT-003 (%ROWTYPE) ---
---   Nom     : NanoOrbit-Gamma
---   Statut  : Opérationnel
---   Batterie: 40 Wh
---   Format  : 6U
---   Masse   : 2 kg
--- ============================================================
 DECLARE
     v_sat SATELLITE%ROWTYPE;
 BEGIN
@@ -114,19 +57,6 @@ BEGIN
 END;
 /
 
-
--- ============================================================
--- EXERCICE 4 : NVL — Gestion des NULL sur résolution instrument
--- Afficher la résolution de chaque instrument.
--- Pour INS-AIS-01 (résolution NULL), afficher 'N/A'.
--- ============================================================
--- Résultat attendu :
---   --- Résolution des instruments ---
---   INS-CAM-01  | Caméra optique   | Résolution : 3 m
---   INS-IR-01   | Infrarouge       | Résolution : 160 m
---   INS-AIS-01  | Récepteur AIS    | Résolution : N/A
---   INS-SPEC-01 | Spectromètre     | Résolution : 30 m
--- ============================================================
 DECLARE
     v_ref       INSTRUMENT.ref_instrument%TYPE;
     v_type      INSTRUMENT.type_instrument%TYPE;
@@ -144,24 +74,6 @@ BEGIN
 END;
 /
 
-
--- ############################################################
---  PALIER 3 — STRUCTURES DE CONTROLE
--- ############################################################
-
--- ============================================================
--- EXERCICE 5 : IF/ELSIF — Catégoriser un satellite
--- Catégoriser chaque satellite selon son statut et sa durée
--- de vie restante estimée.
--- ============================================================
--- Résultat attendu :
---   --- Catégorisation des satellites ---
---   SAT-001 NanoOrbit-Alpha    | Opérationnel | Durée vie: 60 mois | → En bonne santé
---   SAT-002 NanoOrbit-Beta     | Opérationnel | Durée vie: 60 mois | → En bonne santé
---   SAT-003 NanoOrbit-Gamma    | Opérationnel | Durée vie: 84 mois | → En bonne santé
---   SAT-004 NanoOrbit-Delta    | En veille    | Durée vie: 84 mois | → Surveillance requise
---   SAT-005 NanoOrbit-Epsilon  | Désorbité    | Durée vie: 36 mois | → Hors service
--- ============================================================
 DECLARE
     v_categorie VARCHAR2(50);
 BEGIN
@@ -191,20 +103,6 @@ BEGIN
 END;
 /
 
-
--- ============================================================
--- EXERCICE 6 : CASE — Type d'orbite + vitesse orbitale
--- Afficher le type d'orbite de SAT-001 et calculer sa vitesse
--- orbitale approximative : v = 2π × (6371 + altitude) / (période × 60)
--- Résultat en km/s.
--- ============================================================
--- Résultat attendu :
---   --- Orbite du satellite SAT-001 ---
---   Type d'orbite : SSO — Orbite héliosynchrone
---   Altitude      : 550 km
---   Période        : 95.5 min
---   Vitesse orbitale ≈ 7.19 km/s
--- ============================================================
 DECLARE
     v_type_orbite  ORBITE.type_orbite%TYPE;
     v_altitude     ORBITE.altitude%TYPE;
@@ -228,7 +126,6 @@ BEGIN
         ELSE 'Type inconnu'
     END;
 
-    -- v = 2π × (R_terre + altitude) / (période en secondes)
     v_vitesse := (2 * c_pi * (c_rayon_terre + v_altitude)) / (v_periode * 60);
 
     DBMS_OUTPUT.PUT_LINE('--- Orbite du satellite SAT-001 ---');
@@ -239,28 +136,6 @@ BEGIN
 END;
 /
 
-
--- ============================================================
--- EXERCICE 7 : Boucle FOR — Grille des volumes de données
--- Afficher les volumes de données attendus pour des passages
--- de 5 à 15 minutes avec le débit de la station GS-TLS-01.
--- volume (Mo) = débit (Mbps) × durée (secondes) / 8
--- (division par 8 pour convertir Megabits en Megaoctets)
--- ============================================================
--- Résultat attendu :
---   --- Grille volumes — Station GS-TLS-01 (débit: 150 Mbps) ---
---    5 min (300s)  →  5625.00 Mo
---    6 min (360s)  →  6750.00 Mo
---    7 min (420s)  →  7875.00 Mo
---    8 min (480s)  →  9000.00 Mo
---    9 min (540s)  → 10125.00 Mo
---   10 min (600s)  → 11250.00 Mo
---   11 min (660s)  → 12375.00 Mo
---   12 min (720s)  → 13500.00 Mo
---   13 min (780s)  → 14625.00 Mo
---   14 min (840s)  → 15750.00 Mo
---   15 min (900s)  → 16875.00 Mo
--- ============================================================
 DECLARE
     v_debit   STATION_SOL.debit_max%TYPE;
     v_volume  NUMBER(12,2);
@@ -283,23 +158,6 @@ BEGIN
 END;
 /
 
-
--- ############################################################
---  PALIER 4 — CURSEURS
--- ############################################################
-
--- ============================================================
--- EXERCICE 8 : SQL%ROWCOUNT — Mise à jour de statuts
--- Mettre à jour les satellites 'En veille' → 'Opérationnel'
--- et afficher le nombre de lignes modifiées.
--- ROLLBACK à la fin pour ne pas altérer les données.
--- ============================================================
--- Résultat attendu :
---   --- Mise à jour des statuts ---
---   UPDATE En veille → Opérationnel
---   Nombre de satellites mis à jour : 1
---   (ROLLBACK effectué — données restaurées)
--- ============================================================
 BEGIN
     UPDATE SATELLITE
     SET statut = 'Opérationnel'
@@ -314,27 +172,6 @@ BEGIN
 END;
 /
 
-
--- ============================================================
--- EXERCICE 9 : Cursor FOR Loop — Satellites avec orbite et instruments
--- Lister tous les satellites avec leur orbite, leur statut et
--- leurs instruments embarqués.
--- ============================================================
--- Résultat attendu :
---   --- Liste des satellites avec orbite et instruments ---
---   SAT-001 | NanoOrbit-Alpha   | Opérationnel | SSO 550km
---     → INS-CAM-01 (Caméra optique) — Nominal
---     → INS-IR-01 (Infrarouge) — Nominal
---   SAT-002 | NanoOrbit-Beta    | Opérationnel | SSO 550km
---     → INS-CAM-01 (Caméra optique) — Nominal
---   SAT-003 | NanoOrbit-Gamma   | Opérationnel | SSO 700km
---     → INS-CAM-01 (Caméra optique) — Nominal
---     → INS-SPEC-01 (Spectromètre) — Nominal
---   SAT-004 | NanoOrbit-Delta   | En veille    | SSO 700km
---     → INS-IR-01 (Infrarouge) — Dégradé
---   SAT-005 | NanoOrbit-Epsilon | Désorbité    | LEO 400km
---     → INS-AIS-01 (Récepteur AIS) — Hors service
--- ============================================================
 DECLARE
     CURSOR c_satellites IS
         SELECT s.id_satellite, s.nom_satellite, s.statut,
@@ -371,17 +208,6 @@ BEGIN
 END;
 /
 
-
--- ============================================================
--- EXERCICE 10 : OPEN/FETCH/CLOSE — Satellites opérationnels
--- avec leur fenêtre de communication la plus récente (Réalisée).
--- ============================================================
--- Résultat attendu :
---   --- Satellites opérationnels — dernière fenêtre réalisée ---
---   SAT-001 | NanoOrbit-Alpha | Dernière fenêtre: 15/01/2024 09:14 sur GS-KIR-01 (1250 Mo)
---   SAT-002 | NanoOrbit-Beta  | Dernière fenêtre: 15/01/2024 11:52 sur GS-TLS-01 (890 Mo)
---   SAT-003 | NanoOrbit-Gamma | Dernière fenêtre: 16/01/2024 08:30 sur GS-KIR-01 (1680 Mo)
--- ============================================================
 DECLARE
     CURSOR c_sat_op IS
         SELECT s.id_satellite, s.nom_satellite
@@ -401,7 +227,6 @@ BEGIN
         FETCH c_sat_op INTO v_sat;
         EXIT WHEN c_sat_op%NOTFOUND;
 
-        -- Rechercher la fenêtre réalisée la plus récente
         BEGIN
             SELECT datetime_debut, code_station, volume_donnees
             INTO   v_date_fen, v_station, v_volume
@@ -433,19 +258,6 @@ BEGIN
 END;
 /
 
-
--- ============================================================
--- EXERCICE 11 : Curseur paramétré — Fenêtres d'une station
--- Afficher les fenêtres de communication de GS-KIR-01
--- avec le volume total téléchargé.
--- ============================================================
--- Résultat attendu :
---   --- Fenêtres de la station GS-KIR-01 ---
---   FEN 1 | SAT-001 | 15/01/2024 09:14 | 420s | Réalisée  | 1250 Mo
---   FEN 3 | SAT-003 | 16/01/2024 08:30 | 540s | Réalisée  | 1680 Mo
---   ---
---   Volume total téléchargé (Réalisée) : 2930 Mo
--- ============================================================
 DECLARE
     CURSOR c_fenetres(p_station VARCHAR2) IS
         SELECT f.id_fenetre, f.id_satellite, f.datetime_debut,
@@ -478,21 +290,6 @@ BEGIN
 END;
 /
 
-
--- ############################################################
---  PALIER 5 — PROCEDURES ET FONCTIONS STANDALONE
--- ############################################################
-
--- ============================================================
--- EXERCICE 12 : Exceptions prédéfinies — SELECT INTO sécurisé
--- Rechercher un satellite inexistant 'SAT-999' et gérer
--- NO_DATA_FOUND et OTHERS.
--- ============================================================
--- Résultat attendu :
---   --- Test exceptions sur SATELLITE ---
---   Test 1 (SAT-001) : Trouvé — NanoOrbit-Alpha (Opérationnel)
---   Test 2 (SAT-999) : ERREUR — Aucun satellite trouvé avec l'ID SAT-999
--- ============================================================
 DECLARE
     v_nom    SATELLITE.nom_satellite%TYPE;
     v_statut SATELLITE.statut%TYPE;
@@ -519,19 +316,6 @@ BEGIN
 END;
 /
 
-
--- ============================================================
--- EXERCICE 13 : RAISE_APPLICATION_ERROR — Validation fenêtre
--- Valider les conditions avant insertion d'une fenêtre de
--- communication : satellite opérationnel, station active,
--- pas de chevauchement.
--- ============================================================
--- Résultat attendu :
---   --- Validation fenêtre de communication ---
---   Test 1 (SAT-001, GS-KIR-01, 2024-06-01) : Validation OK — insertion autorisée
---   Test 2 (SAT-005, GS-KIR-01, 2024-06-01) : ORA-20010 — Satellite SAT-005 non opérationnel (statut: Désorbité)
---   Test 3 (SAT-001, GS-SGP-01, 2024-06-01) : ORA-20011 — Station GS-SGP-01 non active (statut: Maintenance)
--- ============================================================
 DECLARE
     PROCEDURE valider_fenetre(
         p_id_satellite IN VARCHAR2,
@@ -543,7 +327,6 @@ DECLARE
         v_statut_sta STATION_SOL.statut%TYPE;
         v_count      NUMBER;
     BEGIN
-        -- Vérifier le satellite
         SELECT statut INTO v_statut_sat
         FROM SATELLITE WHERE id_satellite = p_id_satellite;
 
@@ -552,7 +335,6 @@ DECLARE
                 'Satellite ' || p_id_satellite || ' non opérationnel (statut: ' || v_statut_sat || ')');
         END IF;
 
-        -- Vérifier la station
         SELECT statut INTO v_statut_sta
         FROM STATION_SOL WHERE code_station = p_code_station;
 
@@ -561,7 +343,6 @@ DECLARE
                 'Station ' || p_code_station || ' non active (statut: ' || v_statut_sta || ')');
         END IF;
 
-        -- Vérifier le chevauchement
         SELECT COUNT(*) INTO v_count
         FROM FENETRE_COM
         WHERE id_satellite = p_id_satellite
@@ -579,7 +360,6 @@ DECLARE
 BEGIN
     DBMS_OUTPUT.PUT_LINE('--- Validation fenêtre de communication ---');
 
-    -- Test 1 : tout OK
     DBMS_OUTPUT.PUT('Test 1 (SAT-001, GS-KIR-01, 2024-06-01) : ');
     BEGIN
         valider_fenetre('SAT-001', 'GS-KIR-01', TO_TIMESTAMP('2024-06-01 10:00:00','YYYY-MM-DD HH24:MI:SS'), 300);
@@ -587,7 +367,6 @@ BEGIN
         DBMS_OUTPUT.PUT_LINE(SQLERRM);
     END;
 
-    -- Test 2 : satellite désorbité
     DBMS_OUTPUT.PUT('Test 2 (SAT-005, GS-KIR-01, 2024-06-01) : ');
     BEGIN
         valider_fenetre('SAT-005', 'GS-KIR-01', TO_TIMESTAMP('2024-06-01 10:00:00','YYYY-MM-DD HH24:MI:SS'), 300);
@@ -595,7 +374,6 @@ BEGIN
         DBMS_OUTPUT.PUT_LINE(SQLERRM);
     END;
 
-    -- Test 3 : station en maintenance
     DBMS_OUTPUT.PUT('Test 3 (SAT-001, GS-SGP-01, 2024-06-01) : ');
     BEGIN
         valider_fenetre('SAT-001', 'GS-SGP-01', TO_TIMESTAMP('2024-06-01 10:00:00','YYYY-MM-DD HH24:MI:SS'), 300);
@@ -606,19 +384,6 @@ END;
 /
 
 
--- ============================================================
--- EXERCICE 14 : Procédure — afficher_statut_satellite
--- Affiche le statut, l'orbite et les instruments du satellite.
--- ============================================================
--- Résultat attendu (appel avec SAT-001) :
---   === Statut du satellite SAT-001 ===
---   Nom    : NanoOrbit-Alpha
---   Statut : Opérationnel
---   Orbite : SSO — 550 km (période: 95.5 min)
---   Instruments embarqués :
---     1. INS-CAM-01 (Caméra optique) — Nominal
---     2. INS-IR-01 (Infrarouge) — Nominal
--- ============================================================
 CREATE OR REPLACE PROCEDURE afficher_statut_satellite(p_id IN VARCHAR2)
 IS
     v_nom       SATELLITE.nom_satellite%TYPE;
@@ -664,7 +429,6 @@ END;
 /
 SHOW ERRORS PROCEDURE afficher_statut_satellite;
 
--- Test de la procédure
 BEGIN
     afficher_statut_satellite('SAT-001');
     DBMS_OUTPUT.PUT_LINE('');
@@ -673,18 +437,6 @@ END;
 /
 
 
--- ============================================================
--- EXERCICE 15 : Procédure — mettre_a_jour_statut
--- Met à jour le statut d'un satellite et retourne l'ancien
--- statut via un paramètre OUT.
--- ROLLBACK à la fin pour ne pas altérer les données.
--- ============================================================
--- Résultat attendu :
---   --- Mise à jour statut SAT-004 ---
---   Ancien statut : En veille
---   Nouveau statut: Opérationnel
---   (ROLLBACK effectué)
--- ============================================================
 CREATE OR REPLACE PROCEDURE mettre_a_jour_statut(
     p_id            IN  VARCHAR2,
     p_statut        IN  VARCHAR2,
@@ -715,7 +467,6 @@ END;
 /
 SHOW ERRORS PROCEDURE mettre_a_jour_statut;
 
--- Test de la procédure
 DECLARE
     v_ancien VARCHAR2(30);
 BEGIN
@@ -729,17 +480,6 @@ BEGIN
 END;
 /
 
-
--- ============================================================
--- EXERCICE 16 : Fonction — calculer_volume_session
--- Retourne le volume théorique d'une fenêtre de communication :
--- volume = debit_max (Mbps) × duree (s) / 8  (résultat en Mo)
--- ============================================================
--- Résultat attendu :
---   --- Test calculer_volume_session ---
---   Fenêtre 1 : volume théorique = 21000 Mo (GS-KIR-01, 400 Mbps × 420s / 8)
---   Fenêtre 2 : volume théorique = 5812.5 Mo (GS-TLS-01, 150 Mbps × 310s / 8)
--- ============================================================
 CREATE OR REPLACE FUNCTION calculer_volume_session(
     p_id_fenetre IN VARCHAR2
 ) RETURN NUMBER
@@ -764,7 +504,6 @@ END;
 /
 SHOW ERRORS FUNCTION calculer_volume_session;
 
--- Test de la fonction
 DECLARE
     v_vol NUMBER;
 BEGIN
@@ -777,14 +516,3 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('Fenêtre 2 : volume théorique = ' || v_vol || ' Mo (GS-TLS-01, 150 Mbps × 310s / 8)');
 END;
 /
-
-
--- ============================================================
--- RÉSUMÉ DES LIVRABLES PALIERS 1–5
--- ============================================================
--- Palier 1 : Ex. 1 (comptages), Ex. 2 (SELECT INTO)
--- Palier 2 : Ex. 3 (%ROWTYPE), Ex. 4 (NVL)
--- Palier 3 : Ex. 5 (IF/ELSIF), Ex. 6 (CASE + vitesse), Ex. 7 (FOR)
--- Palier 4 : Ex. 8 (ROWCOUNT), Ex. 9 (Cursor FOR), Ex. 10 (OPEN/FETCH), Ex. 11 (paramétré)
--- Palier 5 : Ex. 12 (exceptions), Ex. 13 (RAISE), Ex. 14 (proc afficher), Ex. 15 (proc MAJ), Ex. 16 (fonction volume)
--- ============================================================

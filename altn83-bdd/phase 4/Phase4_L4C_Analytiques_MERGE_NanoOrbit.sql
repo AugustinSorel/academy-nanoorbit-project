@@ -1,32 +1,6 @@
--- ============================================================
--- PROJET NANOORBIT — PHASE 4 — L4-C : ANALYTIQUES & MERGE
--- Module ALTN83 — Bases de Données Réparties
--- SGBD : Oracle 23ai — Schéma : NANOORBIT_ADMIN sur FREEPDB1
--- ============================================================
--- Exercices 11 à 16 : Fonctions analytiques OVER, MERGE INTO
--- Prérequis : Phases 1 à 3 + L4-A et L4-B exécutées
--- ============================================================
 
 SET SERVEROUTPUT ON;
 
-
--- ############################################################
---  PARTIE 4 — FONCTIONS ANALYTIQUES OVER
--- ############################################################
-
--- ============================================================
--- EXERCICE 11 : ROW_NUMBER / RANK / DENSE_RANK
--- Classement des satellites par volume de données téléchargé,
--- global et par type d'orbite (PARTITION BY type_orbite).
--- ============================================================
--- Résultat attendu (5 lignes) :
---   SAT-003 | SSO | 1680 | row=1 | rank=1 | dense=1 | rank_orbite=1
---   SAT-001 | SSO | 1250 | row=2 | rank=2 | dense=2 | rank_orbite=2
---   SAT-002 | SSO |  890 | row=3 | rank=3 | dense=3 | rank_orbite=3
---   SAT-004 | SSO |    0 | row=4 | rank=4 | dense=4 | rank_orbite=4
---   SAT-005 | LEO |    0 | row=5 | rank=4 | dense=4 | rank_orbite=1
--- NOTE : SAT-004 et SAT-005 ont 0 Mo → même RANK (4) et DENSE_RANK (4)
--- ============================================================
 SELECT
     s.id_satellite,
     s.nom_satellite,
@@ -43,16 +17,6 @@ GROUP BY s.id_satellite, s.nom_satellite, o.type_orbite
 ORDER BY volume_total DESC, s.id_satellite;
 
 
--- ============================================================
--- EXERCICE 12 : LAG / LEAD — Évolution du volume par station
--- Pour chaque fenêtre réalisée d'une station, comparer le
--- volume avec la fenêtre précédente et calculer le % d'évolution.
--- ============================================================
--- Résultat attendu :
---   GS-KIR-01 | FEN 1 | 15/01/2024 09:14 | 1250 Mo | préc: -    | suiv: 1680 | évol: -
---   GS-KIR-01 | FEN 3 | 16/01/2024 08:30 | 1680 Mo | préc: 1250 | suiv: -    | évol: +34.4%
---   GS-TLS-01 | FEN 2 | 15/01/2024 11:52 |  890 Mo | préc: -    | suiv: -    | évol: -
--- ============================================================
 SELECT
     f.code_station,
     st.nom_station,
@@ -81,15 +45,6 @@ WHERE f.statut = 'Réalisée'
 ORDER BY f.code_station, f.datetime_debut;
 
 
--- ============================================================
--- EXERCICE 13 : SUM OVER — Volumes cumulés chronologiquement
--- par station avec moyenne mobile sur les 3 dernières fenêtres.
--- ============================================================
--- Résultat attendu :
---   GS-KIR-01 | FEN 1 | 1250 | cumulé: 1250 | moy3: 1250
---   GS-KIR-01 | FEN 3 | 1680 | cumulé: 2930 | moy3: 1465
---   GS-TLS-01 | FEN 2 |  890 | cumulé:  890 | moy3:  890
--- ============================================================
 SELECT
     f.id_fenetre,
     f.code_station,
@@ -112,18 +67,6 @@ WHERE f.statut = 'Réalisée'
 ORDER BY f.code_station, f.datetime_debut;
 
 
--- ============================================================
--- EXERCICE 14 : Tableau de bord constellation
--- Combiner RANK, SUM OVER et ROUND pour produire le rapport
--- mensuel : rang satellite, part % du volume total, cumul,
--- comparaison à la moyenne.
--- ============================================================
--- Résultat attendu (janvier 2024, 3 lignes) :
---   2024-01 | #1 SAT-003 | NanoOrbit-Gamma | GS-KIR-01 | 1680 Mo | 44.0% | total mois: 3820
---   2024-01 | #2 SAT-001 | NanoOrbit-Alpha | GS-KIR-01 | 1250 Mo | 32.7% | total mois: 3820
---   2024-01 | #3 SAT-002 | NanoOrbit-Beta  | GS-TLS-01 |  890 Mo | 23.3% | total mois: 3820
--- Moyenne mensuelle par passage : 3820 / 3 = 1273.33 Mo
--- ============================================================
 SELECT
     TO_CHAR(TRUNC(f.datetime_debut, 'MM'), 'YYYY-MM')                                  AS mois,
     f.code_station,
@@ -152,23 +95,8 @@ WHERE f.statut = 'Réalisée'
 ORDER BY mois, rang_mensuel;
 
 
--- ############################################################
---  PARTIE 5 — MERGE INTO
--- ############################################################
 
--- ============================================================
--- EXERCICE 15 : MERGE INTO SATELLITE
--- Synchroniser un lot de mises à jour de statuts reçues d'un
--- système IoT externe.
--- Si le satellite existe : mettre à jour statut et orbite.
--- Si nouveau : insérer avec statut 'En veille'.
--- ============================================================
--- Résultat attendu :
---   SAT-004 existant → UPDATE statut En veille → Opérationnel
---   SAT-006 nouveau  → INSERT avec statut 'En veille' (règle métier)
--- ============================================================
 
--- Table temporaire simulant les données IoT
 BEGIN EXECUTE IMMEDIATE 'DROP TABLE tmp_iot_satellites'; EXCEPTION WHEN OTHERS THEN NULL; END;
 /
 
@@ -184,7 +112,6 @@ CREATE GLOBAL TEMPORARY TABLE tmp_iot_satellites (
     capacite_batterie NUMBER(5,2)
 ) ON COMMIT PRESERVE ROWS;
 
--- Données IoT : 1 existant (SAT-004) + 1 nouveau (SAT-006)
 INSERT INTO tmp_iot_satellites VALUES (
     'SAT-004', 'NanoOrbit-Delta', 'Opérationnel', '2', 2.0, '6U',
     TO_DATE('2023-06-10','YYYY-MM-DD'), 84, 40
@@ -194,7 +121,6 @@ INSERT INTO tmp_iot_satellites VALUES (
     TO_DATE('2025-01-15','YYYY-MM-DD'), 60, 30
 );
 
--- MERGE
 MERGE INTO SATELLITE tgt
 USING tmp_iot_satellites src
 ON (tgt.id_satellite = src.id_satellite)
@@ -210,39 +136,19 @@ WHEN NOT MATCHED THEN
             'En veille',   -- Règle métier : tout nouveau satellite arrive En veille
             src.duree_vie_prevue, src.capacite_batterie, src.id_orbite);
 
--- Vérification
--- Résultat attendu :
---   SAT-004 → Opérationnel (mis à jour depuis En veille)
---   SAT-006 → En veille (inséré, statut forcé malgré source 'Opérationnel')
 SELECT id_satellite, nom_satellite, statut, id_orbite
 FROM SATELLITE
 WHERE id_satellite IN ('SAT-004', 'SAT-006')
 ORDER BY id_satellite;
 
--- Annulation pour garder les données propres
 ROLLBACK;
 
--- Vérification post-rollback
--- SAT-004 doit être revenu à 'En veille', SAT-006 ne doit plus exister
 SELECT id_satellite, statut FROM SATELLITE
 WHERE id_satellite IN ('SAT-004', 'SAT-006')
 ORDER BY id_satellite;
 
 
--- ============================================================
--- EXERCICE 16 : MERGE INTO STATION_SOL
--- Synchroniser les stations au sol depuis un fichier de
--- configuration révisé : mettre à jour débit et statut si
--- la station existe, insérer si nouvelle.
--- NOTE : Remplace l'exercice sur AFFECTATION_STATION
--- (table supprimée du schéma).
--- ============================================================
--- Résultat attendu :
---   GS-SGP-01 existant → UPDATE debit_max 120→200, statut Maintenance→Active
---   GS-SVB-01 nouveau  → INSERT (Svalbard Arctic Station)
--- ============================================================
 
--- Table temporaire simulant le fichier de configuration
 BEGIN EXECUTE IMMEDIATE 'DROP TABLE tmp_config_stations'; EXCEPTION WHEN OTHERS THEN NULL; END;
 /
 
@@ -257,7 +163,6 @@ CREATE GLOBAL TEMPORARY TABLE tmp_config_stations (
     statut           VARCHAR2(20)
 ) ON COMMIT PRESERVE ROWS;
 
--- Données config : 1 mise à jour (SGP) + 1 nouvelle station (Svalbard)
 INSERT INTO tmp_config_stations VALUES (
     'GS-SGP-01', 'Singapore Station', 1.3521, 103.8198, 3.0, 'S', 200, 'Active'
 );
@@ -279,19 +184,13 @@ WHEN NOT MATCHED THEN
     VALUES (src.code_station, src.nom_station, src.latitude, src.longitude,
             src.diametre_antenne, src.bande_frequence, src.debit_max, src.statut);
 
--- Vérification
--- Résultat attendu :
---   GS-SGP-01 → debit_max=200, statut=Active
---   GS-SVB-01 → nouvelle station insérée
 SELECT code_station, nom_station, debit_max, statut
 FROM STATION_SOL
 WHERE code_station IN ('GS-SGP-01', 'GS-SVB-01')
 ORDER BY code_station;
 
--- Annulation pour garder les données propres
 ROLLBACK;
 
--- Vérification post-rollback
 SELECT code_station, nom_station, debit_max, statut
 FROM STATION_SOL
 ORDER BY code_station;

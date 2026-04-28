@@ -3,9 +3,6 @@ import { getPool } from '../db.js'
 
 const fenetres = new Hono()
 
-// GET /fenetres — list communication windows
-// Uses v_fenetres_detail which provides duree_formatee and volume_affiche
-// Query params: ?statut=, ?satellite=, ?station=
 fenetres.get('/', async (c) => {
   const statut = c.req.query('statut')
   const satellite = c.req.query('satellite')
@@ -59,7 +56,6 @@ fenetres.get('/', async (c) => {
   }
 })
 
-// GET /fenetres/:id — single communication window via v_fenetres_detail
 fenetres.get('/:id', async (c) => {
   const id = c.req.param('id')
   const pool = await getPool()

@@ -1,17 +1,5 @@
--- ============================================================
--- PROJET NANOORBIT — PHASE 3 — L3-C : PACKAGE BODY
--- Module ALTN83 — Bases de Données Réparties
--- SGBD : Oracle 23ai — Schéma : NANOORBIT_ADMIN sur FREEPDB1
--- ============================================================
--- Package pkg_nanoOrbit — Corps (BODY)
--- Implémentation de toutes les procédures et fonctions
--- ============================================================
-
 CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
 
-    -- ==============================================================
-    -- FONCTION PRIVEE : description du type d'orbite
-    -- ==============================================================
     FUNCTION description_orbite(p_type IN VARCHAR2) RETURN VARCHAR2
     IS
     BEGIN
@@ -25,9 +13,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     END description_orbite;
 
 
-    -- ==============================================================
-    -- PROCEDURE : afficher_statut_satellite (Ex.14)
-    -- ==============================================================
     PROCEDURE afficher_statut_satellite(p_id IN VARCHAR2)
     IS
         v_nom       SATELLITE.nom_satellite%TYPE;
@@ -75,9 +60,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     END afficher_statut_satellite;
 
 
-    -- ==============================================================
-    -- PROCEDURE : mettre_a_jour_statut (Ex.15)
-    -- ==============================================================
     PROCEDURE mettre_a_jour_statut(
         p_id            IN  VARCHAR2,
         p_statut        IN  VARCHAR2,
@@ -85,12 +67,10 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     )
     IS
     BEGIN
-        -- Récupérer l'ancien statut
         SELECT statut INTO p_ancien_statut
         FROM SATELLITE
         WHERE id_satellite = p_id;
 
-        -- Mettre à jour
         UPDATE SATELLITE
         SET statut = p_statut
         WHERE id_satellite = p_id;
@@ -108,10 +88,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     END mettre_a_jour_statut;
 
 
-    -- ==============================================================
-    -- PROCEDURE : rapport_flotte
-    -- Affiche un rapport complet de tous les satellites
-    -- ==============================================================
     PROCEDURE rapport_flotte
     IS
         v_total       NUMBER := 0;
@@ -155,10 +131,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     END rapport_flotte;
 
 
-    -- ==============================================================
-    -- PROCEDURE : rapport_station
-    -- Affiche les fenêtres d'une station avec volume total
-    -- ==============================================================
     PROCEDURE rapport_station(p_code_station IN VARCHAR2)
     IS
         v_nom_station   STATION_SOL.nom_station%TYPE;
@@ -216,9 +188,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     END rapport_station;
 
 
-    -- ==============================================================
-    -- PROCEDURE : valider_fenetre (Ex.13 intégré au package)
-    -- ==============================================================
     PROCEDURE valider_fenetre(
         p_id_satellite IN VARCHAR2,
         p_code_station IN VARCHAR2,
@@ -230,7 +199,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
         v_statut_sta STATION_SOL.statut%TYPE;
         v_count      NUMBER;
     BEGIN
-        -- Vérifier le satellite
         SELECT statut INTO v_statut_sat
         FROM SATELLITE WHERE id_satellite = p_id_satellite;
 
@@ -240,7 +208,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
                 || ' non opérationnel (statut: ' || v_statut_sat || ')');
         END IF;
 
-        -- Vérifier la station
         SELECT statut INTO v_statut_sta
         FROM STATION_SOL WHERE code_station = p_code_station;
 
@@ -250,7 +217,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
                 || ' non active (statut: ' || v_statut_sta || ')');
         END IF;
 
-        -- Vérifier le chevauchement sur le satellite
         SELECT COUNT(*) INTO v_count
         FROM FENETRE_COM
         WHERE id_satellite = p_id_satellite
@@ -262,7 +228,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
                 'Chevauchement détecté pour le satellite ' || p_id_satellite);
         END IF;
 
-        -- Vérifier le chevauchement sur la station
         SELECT COUNT(*) INTO v_count
         FROM FENETRE_COM
         WHERE code_station = p_code_station
@@ -284,10 +249,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     END valider_fenetre;
 
 
-    -- ==============================================================
-    -- FONCTION : calculer_volume_session (Ex.16)
-    -- volume = debit_max (Mbps) × duree (s) / 8  → Mo
-    -- ==============================================================
     FUNCTION calculer_volume_session(p_id_fenetre IN VARCHAR2) RETURN NUMBER
     IS
         v_debit  STATION_SOL.debit_max%TYPE;
@@ -308,10 +269,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     END calculer_volume_session;
 
 
-    -- ==============================================================
-    -- FONCTION : vitesse_orbitale (Ex.6)
-    -- v = 2π × (R_terre + altitude) / (période × 60)  → km/s
-    -- ==============================================================
     FUNCTION vitesse_orbitale(p_id_satellite IN VARCHAR2) RETURN NUMBER
     IS
         v_altitude ORBITE.altitude%TYPE;
@@ -332,10 +289,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     END vitesse_orbitale;
 
 
-    -- ==============================================================
-    -- FONCTION : nb_instruments
-    -- Retourne le nombre d'instruments embarqués
-    -- ==============================================================
     FUNCTION nb_instruments(p_id_satellite IN VARCHAR2) RETURN NUMBER
     IS
         v_count NUMBER;
@@ -348,10 +301,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_nanoOrbit AS
     END nb_instruments;
 
 
-    -- ==============================================================
-    -- FONCTION : get_resume_satellite
-    -- Retourne un record résumé d'un satellite
-    -- ==============================================================
     FUNCTION get_resume_satellite(p_id IN VARCHAR2) RETURN t_resume_satellite
     IS
         v_resume t_resume_satellite;

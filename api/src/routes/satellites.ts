@@ -3,16 +3,15 @@ import { getPool } from '../db.js'
 
 const satellites = new Hono()
 
-// GET /satellites — list all satellites, optional ?statut= filter
-// Uses v_satellites_operationnels for statut=Opérationnel, raw table otherwise
 satellites.get('/', async (c) => {
   const statut = c.req.query('statut')
   const pool = await getPool()
   const conn = await pool.getConnection()
+
+
+  console.log(statut,"<<<<<")
+
   try {
-    // v_satellites_operationnels already filters to Opérationnel satellites and
-    // adds nb_instruments + etat_batterie — use it when that filter is requested
-    // or when no filter is given (we union with the view for the operational ones)
     if (!statut || statut === 'Opérationnel') {
       const result = await conn.execute(
         `SELECT
@@ -31,7 +30,8 @@ satellites.get('/', async (c) => {
       return c.json(result.rows)
     }
 
-    // For other statut filters, query the base table directly
+    console.log("HERE")
+
     const result = await conn.execute(
       `SELECT
          s.id_satellite,
@@ -58,7 +58,6 @@ satellites.get('/', async (c) => {
   }
 })
 
-// GET /satellites/:id — single satellite with its instruments and missions
 satellites.get('/:id', async (c) => {
   const id = c.req.param('id')
   const pool = await getPool()
@@ -153,7 +152,6 @@ satellites.get('/:id', async (c) => {
   }
 })
 
-// PATCH /satellites/:id/statut — update satellite status
 satellites.patch('/:id/statut', async (c) => {
   const id = c.req.param('id')
   const body = await c.req.json<{ statut: string }>()

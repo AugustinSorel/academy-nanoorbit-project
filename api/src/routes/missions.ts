@@ -3,8 +3,6 @@ import { getPool } from '../db.js'
 
 const missions = new Hono()
 
-// GET /missions — list all missions, optional ?statut= filter
-// Uses v_stats_missions which adds nb_satellites, types_orbites, volume_total_mo
 missions.get('/', async (c) => {
   const statut = c.req.query('statut')
   const pool = await getPool()
@@ -37,7 +35,6 @@ missions.get('/', async (c) => {
   }
 })
 
-// GET /missions/:id — single mission with participating satellites
 missions.get('/:id', async (c) => {
   const id = c.req.param('id')
   const pool = await getPool()
