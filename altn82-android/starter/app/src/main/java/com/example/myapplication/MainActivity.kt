@@ -13,7 +13,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                // Phase 3 : NavHost avec BottomNavigationBar (Dashboard, Planning, Carte)
                 AppNavHost()
             }
         }

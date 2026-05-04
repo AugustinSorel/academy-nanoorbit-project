@@ -13,15 +13,6 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.model.StatutSatellite
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
-/**
- * Chip Material3 colorée reflétant le statut Oracle d'un satellite.
- *
- * Correspondance couleurs ↔ valeurs CHECK Oracle :
- *   Opérationnel → vert   (#4CAF50)
- *   En veille    → orange (#FF9800)
- *   Défaillant   → rouge  (#F44336)
- *   Désorbité    → gris   (#9E9E9E)
- */
 @Composable
 fun StatusBadge(
     statut: StatutSatellite,
@@ -48,38 +39,26 @@ fun StatusBadge(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
-
 @Preview(showBackground = true, name = "Badge Opérationnel")
 @Composable
 private fun PreviewOperationnel() {
-    MyApplicationTheme {
-        StatusBadge(StatutSatellite.OPERATIONNEL)
-    }
+    MyApplicationTheme { StatusBadge(StatutSatellite.OPERATIONNEL) }
 }
 
 @Preview(showBackground = true, name = "Badge En veille")
 @Composable
 private fun PreviewEnVeille() {
-    MyApplicationTheme {
-        StatusBadge(StatutSatellite.EN_VEILLE)
-    }
+    MyApplicationTheme { StatusBadge(StatutSatellite.EN_VEILLE) }
 }
 
 @Preview(showBackground = true, name = "Badge Défaillant")
 @Composable
 private fun PreviewDefaillant() {
-    MyApplicationTheme {
-        StatusBadge(StatutSatellite.DEFAILLANT)
-    }
+    MyApplicationTheme { StatusBadge(StatutSatellite.DEFAILLANT) }
 }
 
 @Preview(showBackground = true, name = "Badge Désorbité")
 @Composable
 private fun PreviewDesorbite() {
-    MyApplicationTheme {
-        StatusBadge(StatutSatellite.DESORBITE)
-    }
+    MyApplicationTheme { StatusBadge(StatutSatellite.DESORBITE) }
 }

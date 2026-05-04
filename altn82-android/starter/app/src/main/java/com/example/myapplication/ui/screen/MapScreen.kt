@@ -23,6 +23,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,31 +33,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import com.example.myapplication.data.model.mockStations
+import com.example.myapplication.data.model.StationSol
+import com.example.myapplication.ui.viewmodel.NanoOrbitViewModel
+import org.koin.androidx.compose.koinViewModel
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
-/**
- * Écran Cartographie — Phase 3 (L3-E).
- *
- * Intègre osmdroid (OpenStreetMap) pour afficher les stations au sol :
- *   - Marqueurs colorés par statut : Active (vert), Maintenance (orange), Hors service (gris)
- *   - Infobulle au clic : nom, bande de fréquence, débit max
- *   - Distance à chaque station affichée si la géolocalisation est active
- *   - FAB "Me localiser" : centre la carte sur la position GPS de l'opérateur
- *
- * Permissions requises (AndroidManifest) :
- *   ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION (demandées à l'exécution)
- *
- * Phase 3 — L3-E
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen() {
+fun MapScreen(
+    vm: NanoOrbitViewModel = koinViewModel()
+) {
     val context = LocalContext.current
+    val stations by vm.stations.collectAsState()
     var mapView by remember { mutableStateOf<MapView?>(null) }
     var hasLocationPermission by remember {
         mutableStateOf(
@@ -66,7 +58,6 @@ fun MapScreen() {
         )
     }
 
-    // Lanceur de demande de permission GPS
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -90,7 +81,6 @@ fun MapScreen() {
             )
         },
         floatingActionButton = {
-            // FAB "Me localiser" — centre la carte sur la position GPS
             FloatingActionButton(onClick = {
                 if (hasLocationPermission) {
                     centerOnUserLocation(mapView)
@@ -112,35 +102,27 @@ fun MapScreen() {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // ── Carte osmdroid (OpenStreetMap) ──────────────────────────────
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
-                    // Initialisation osmdroid (user-agent obligatoire)
                     Configuration.getInstance().userAgentValue = ctx.packageName
 
                     MapView(ctx).also { mv ->
                         mapView = mv
                         mv.setTileSource(TileSourceFactory.MAPNIK)
                         mv.setMultiTouchControls(true)
-
-                        // Vue initiale centrée sur l'Europe
                         mv.controller.setZoom(3.0)
                         mv.controller.setCenter(GeoPoint(20.0, 10.0))
-
-                        // Ajout des marqueurs de stations
-                        addStationMarkers(mv)
                     }
                 },
                 update = { mv ->
-                    // Mise à jour si l'état change (ex : permission accordée)
-                    mv.invalidate()
+                    mv.overlays.clear()
+                    addStationMarkers(mv, stations)
                 }
             )
         }
     }
 
-    // Cycle de vie de la MapView (pause/resume)
     DisposableEffect(Unit) {
         onDispose {
             mapView?.onDetach()
@@ -148,28 +130,17 @@ fun MapScreen() {
     }
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Ajoute un marqueur coloré par statut pour chaque station sol.
- *
- * Couleurs :
- *   Active       → vert  (#4CAF50)
- *   Maintenance  → orange (#FF9800)
- *   Hors service → gris  (#9E9E9E)
- */
-private fun addStationMarkers(mapView: MapView) {
-    mockStations.forEach { station ->
+private fun addStationMarkers(mapView: MapView, stations: List<StationSol>) {
+    stations.forEach { station ->
         val marker = Marker(mapView)
         marker.position = GeoPoint(station.latitude, station.longitude)
         marker.title   = station.nomStation
         marker.snippet = "Bande : ${station.bandeFrequence} | Débit max : ${station.debitMax} Mbps"
 
-        // Couleur selon statut de la station
         val color = when (station.statut) {
-            "Active"      -> Color.parseColor("#4CAF50") // vert
-            "Maintenance" -> Color.parseColor("#FF9800") // orange
-            else          -> Color.parseColor("#9E9E9E") // gris (Hors service)
+            "Active"      -> Color.parseColor("#4CAF50")
+            "Maintenance" -> Color.parseColor("#FF9800")
+            else          -> Color.parseColor("#9E9E9E")
         }
         marker.icon = createCircleDrawable(color)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
@@ -179,7 +150,6 @@ private fun addStationMarkers(mapView: MapView) {
     mapView.invalidate()
 }
 
-/** Crée un drawable circulaire coloré pour les marqueurs osmdroid. */
 private fun createCircleDrawable(color: Int): android.graphics.drawable.Drawable {
     val shape = ShapeDrawable(OvalShape())
     shape.intrinsicWidth  = 40
@@ -189,10 +159,8 @@ private fun createCircleDrawable(color: Int): android.graphics.drawable.Drawable
     return shape
 }
 
-/** Centre la carte sur la position GPS de l'utilisateur via LocationManager. */
 private fun centerOnUserLocation(mapView: MapView?) {
     mapView ?: return
-    // Utilisation du LocationManager système (pas de dépendance FusedLocation nécessaire en Phase 3)
     try {
         val lm = mapView.context.getSystemService(android.content.Context.LOCATION_SERVICE)
             as android.location.LocationManager
@@ -204,6 +172,5 @@ private fun centerOnUserLocation(mapView: MapView?) {
             mapView.controller.setZoom(10.0)
         }
     } catch (_: Exception) {
-        // Permission refusée ou GPS indisponible — ignorer silencieusement
     }
 }

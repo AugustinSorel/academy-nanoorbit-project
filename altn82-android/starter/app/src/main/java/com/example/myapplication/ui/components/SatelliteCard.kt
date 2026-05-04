@@ -28,22 +28,12 @@ import com.example.myapplication.data.model.StatutSatellite
 import com.example.myapplication.data.model.mockSatellites
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
-/**
- * Carte affichant les informations essentielles d'un satellite.
- *
- * Comportement pour les satellites Désorbités (RG-S06) :
- * - Opacité réduite à 50 % (carte grisée)
- * - Bandeau "DÉSORBITÉ" en surimpression
- * - Interaction toujours cliquable pour consultation de l'historique,
- *   mais le Dashboard devra désactiver la création de fenêtres (miroir trigger T1 Oracle)
- */
 @Composable
 fun SatelliteCard(
     satellite: Satellite,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // statut null → vue opérationnelle (tous les satellites listés sont opérationnels)
     val effectiveStatut = satellite.statut ?: StatutSatellite.OPERATIONNEL
     val isDesorbite = effectiveStatut == StatutSatellite.DESORBITE
     val cardAlpha = if (isDesorbite) 0.55f else 1f
@@ -66,7 +56,6 @@ fun SatelliteCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Pastille colorée selon statut
             Box(
                 modifier = Modifier
                     .size(12.dp)
@@ -86,7 +75,6 @@ fun SatelliteCard(
                     StatusBadge(statut = effectiveStatut)
                 }
 
-                // idOrbite (table) ou orbite (vue) selon la source de données
                 val orbitLabel = satellite.idOrbite ?: satellite.orbite ?: "-"
                 Text(
                     text = "${satellite.formatCubesat}  •  $orbitLabel  •  ${satellite.idSatellite}",
@@ -95,7 +83,6 @@ fun SatelliteCard(
                     modifier = Modifier.padding(top = 2.dp)
                 )
 
-                // Bandeau DÉSORBITÉ visible uniquement pour ce statut
                 if (effectiveStatut == StatutSatellite.DESORBITE) {
                     Text(
                         text = "DÉSORBITÉ — Aucune fenêtre ni mission possible (RG-S06)",
@@ -109,10 +96,6 @@ fun SatelliteCard(
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
 
 @Preview(showBackground = true, name = "Satellite Opérationnel")
 @Composable

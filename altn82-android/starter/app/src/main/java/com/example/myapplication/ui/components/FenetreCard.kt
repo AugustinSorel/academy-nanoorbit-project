@@ -27,17 +27,6 @@ import com.example.myapplication.ui.theme.MyApplicationTheme
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-/**
- * Carte affichant une fenêtre de communication satellite ↔ station sol.
- *
- * Contrainte RG-F04 (miroir trigger Oracle T2) : la durée est bornée à [1, 900 s].
- * Contrainte RG-F05 : volumeDonnees est NULL si statut ≠ "Réalisée" (affiché N/D).
- *
- * Codes couleur des badges de statut :
- *   Planifiée → bleu  (#2196F3)
- *   Réalisée  → vert  (#4CAF50)
- *   Annulée   → rouge (#F44336)
- */
 @Composable
 fun FenetreCard(
     fenetre: FenetreCom,
@@ -56,7 +45,6 @@ fun FenetreCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
 
-            // En-tête : satellite → station + badge statut
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -82,7 +70,6 @@ fun FenetreCard(
                 }
             }
 
-            // Date/heure de début
             Text(
                 text = "Début : ${formatDatetime(fenetre)}",
                 style = MaterialTheme.typography.bodySmall,
@@ -90,7 +77,6 @@ fun FenetreCard(
                 modifier = Modifier.padding(top = 4.dp)
             )
 
-            // Durée + volume
             Row(modifier = Modifier.padding(top = 4.dp)) {
                 Text(
                     text = "Durée : ${formatDuree(fenetre.duree)}",
@@ -110,10 +96,6 @@ fun FenetreCard(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers privés
-// ---------------------------------------------------------------------------
-
 private fun formatDuree(dureeSecondes: Int): String {
     val min = dureeSecondes / 60
     val sec = dureeSecondes % 60
@@ -122,10 +104,6 @@ private fun formatDuree(dureeSecondes: Int): String {
 
 private fun formatDatetime(fenetre: FenetreCom): String =
     SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.FRANCE).format(fenetre.datetimeDebut)
-
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
 
 @Preview(showBackground = true, name = "Fenêtre Réalisée")
 @Composable

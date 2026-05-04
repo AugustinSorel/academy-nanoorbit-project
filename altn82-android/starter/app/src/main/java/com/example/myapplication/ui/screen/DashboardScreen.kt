@@ -27,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,23 +42,6 @@ import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.ui.viewmodel.NanoOrbitViewModel
 import org.koin.androidx.compose.koinViewModel
 
-/*
- * Q1 — LazyColumn vs Column
- * LazyColumn ne compose et ne dessine que les éléments visibles à l'écran (fenêtre glissante).
- * Avec 100 satellites, Column composerait tous les items en une seule passe, saturant la mémoire
- * et bloquant l'UI thread lors du premier rendu. LazyColumn maintient une complexité mémoire en
- * O(éléments visibles) au lieu de O(total), quel que soit le nombre d'items dans la liste.
- */
-
-/**
- * Écran principal — Phase 2.
- *
- * Connecté au ViewModel via collectAsStateWithLifecycle (lifecycle-aware).
- * Délègue tous les événements au ViewModel : pas d'appel réseau direct depuis le composable.
- *
- * @param vm               injecté automatiquement par Koin via koinViewModel()
- * @param onSatelliteClick callback de navigation vers DetailScreen (Phase 3)
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -71,10 +55,7 @@ fun DashboardScreen(
     val selectedStatut  by vm.selectedStatut.collectAsState()
 
     val totalCount        = satellites.size
-    // statut null → vue opérationnelle : tous les items sont opérationnels par définition
-    val operationnelCount = satellites.count {
-        it.statut == StatutSatellite.OPERATIONNEL || it.statut == null
-    }
+    val operationnelCount by vm.operationnelCount.collectAsState()
 
     Scaffold(
         topBar = {
@@ -102,7 +83,6 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ── Barre de recherche ──────────────────────────────────────────
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = vm::onSearchQueryChange,
@@ -120,10 +100,6 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ── Filtres par statut (Phase 2 — Étape 5) ─────────────────────
-            // FilterChip "Tous" + un chip par valeur de StatutSatellite.
-            // Le chip actif est surligné (selected = true).
-            // Le filtre s'applique en combinaison avec la recherche textuelle (dans le ViewModel).
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 4.dp)
@@ -136,6 +112,7 @@ fun DashboardScreen(
                     )
                 }
                 items(StatutSatellite.values().toList()) { statut ->
+                    print(statut)
                     FilterChip(
                         selected = selectedStatut == statut,
                         onClick = { vm.onStatutFilterChange(statut) },
@@ -146,7 +123,6 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // ── Compteur ────────────────────────────────────────────────────
             if (!isLoading && errorMessage == null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -158,7 +134,6 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    // Compteur "{n} résultat(s)" mis à jour en temps réel
                     if (searchQuery.isNotBlank() || selectedStatut != null) {
                         Text(
                             text = "$totalCount résultat(s)",
@@ -170,9 +145,8 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // ── États : chargement / erreur / liste ─────────────────────────
             when {
-                isLoading -> {
+                isLoading && satellites.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -211,7 +185,6 @@ fun DashboardScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            // Bouton Réessayer appelle refreshSatellites() dans le ViewModel
                             Button(onClick = vm::refreshSatellites) {
                                 Text("Réessayer")
                             }
@@ -236,20 +209,25 @@ fun DashboardScreen(
                 }
 
                 else -> {
-                    // ── LazyColumn des satellites (cf. Q1 en haut du fichier) ──
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
+                    PullToRefreshBox(
+                        isRefreshing = isLoading,
+                        onRefresh = vm::refreshSatellites,
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        items(
-                            items = satellites,
-                            key = { it.idSatellite }
-                        ) { satellite ->
-                            SatelliteCard(
-                                satellite = satellite,
-                                onClick = { onSatelliteClick(satellite.idSatellite) }
-                            )
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            items(
+                                items = satellites,
+                                key = { it.idSatellite }
+                            ) { satellite ->
+                                SatelliteCard(
+                                    satellite = satellite,
+                                    onClick = { onSatelliteClick(satellite.idSatellite) }
+                                )
+                            }
                         }
                     }
                 }
@@ -258,16 +236,10 @@ fun DashboardScreen(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Preview
-// ---------------------------------------------------------------------------
-
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun PreviewDashboard() {
     MyApplicationTheme {
-        // Preview statique sans Koin.
-        // On instancie un repository factice (mock) et un ViewModel directement.
         val fakeDao = object : com.example.myapplication.data.local.NanoOrbitDao {
             override suspend fun getAllSatellites() = emptyList<com.example.myapplication.data.local.SatelliteEntity>()
             override suspend fun getLastUpdated(): Long? = null

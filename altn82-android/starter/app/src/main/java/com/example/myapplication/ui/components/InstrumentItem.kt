@@ -22,21 +22,6 @@ import com.example.myapplication.data.model.Instrument
 import com.example.myapplication.data.model.mockInstruments
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
-/**
- * Ligne d'instrument embarqué affichée dans la fiche détail d'un satellite.
- *
- * Paramètres :
- *   instrument           → données du catalogue INSTRUMENT (Oracle)
- *   etatFonctionnement   → état de l'association EMBARQUEMENT pour ce couple (sat, instr)
- *                          Valeurs : Actif | Nominal | Dégradé | Inactif | Hors service
- *
- * La résolution est affichée "N/A" si null (cas du récepteur AIS — RG-I01).
- *
- * Codes couleur de l'état de fonctionnement (miroir CHECK EMBARQUEMENT.etat_fonctionnement) :
- *   Actif / Nominal   → vert   (#4CAF50)
- *   Dégradé           → orange (#FF9800)
- *   Inactif / Hors service → gris (#9E9E9E)
- */
 @Composable
 fun InstrumentItem(
     instrument: Instrument,
@@ -61,7 +46,6 @@ fun InstrumentItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                // Type et modèle
                 Text(
                     text = instrument.typeInstrument,
                     style = MaterialTheme.typography.bodyMedium,
@@ -90,7 +74,6 @@ fun InstrumentItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Indicateur d'état de fonctionnement
             Surface(
                 shape = RoundedCornerShape(50),
                 color = etatColor
@@ -110,19 +93,11 @@ fun InstrumentItem(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
-
 @Preview(showBackground = true, name = "Instrument Actif (avec résolution)")
 @Composable
 private fun PreviewActif() {
     MyApplicationTheme {
-        InstrumentItem(
-            instrument = mockInstruments[0],    // Caméra optique
-            etatFonctionnement = "Actif",
-            showDivider = false
-        )
+        InstrumentItem(instrument = mockInstruments[0], etatFonctionnement = "Actif", showDivider = false)
     }
 }
 
@@ -130,11 +105,7 @@ private fun PreviewActif() {
 @Composable
 private fun PreviewAis() {
     MyApplicationTheme {
-        InstrumentItem(
-            instrument = mockInstruments[2],    // Récepteur AIS — resolution = null
-            etatFonctionnement = "Actif",
-            showDivider = false
-        )
+        InstrumentItem(instrument = mockInstruments[2], etatFonctionnement = "Actif", showDivider = false)
     }
 }
 
@@ -142,11 +113,7 @@ private fun PreviewAis() {
 @Composable
 private fun PreviewDegrade() {
     MyApplicationTheme {
-        InstrumentItem(
-            instrument = mockInstruments[1],    // Infrarouge
-            etatFonctionnement = "Dégradé",
-            showDivider = false
-        )
+        InstrumentItem(instrument = mockInstruments[1], etatFonctionnement = "Dégradé", showDivider = false)
     }
 }
 
@@ -154,10 +121,6 @@ private fun PreviewDegrade() {
 @Composable
 private fun PreviewInactif() {
     MyApplicationTheme {
-        InstrumentItem(
-            instrument = mockInstruments[3],    // Spectromètre
-            etatFonctionnement = "Inactif",
-            showDivider = false
-        )
+        InstrumentItem(instrument = mockInstruments[3], etatFonctionnement = "Inactif", showDivider = false)
     }
 }

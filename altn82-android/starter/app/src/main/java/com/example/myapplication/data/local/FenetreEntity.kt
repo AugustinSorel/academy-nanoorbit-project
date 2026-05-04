@@ -4,29 +4,18 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.myapplication.data.model.FenetreCom
 
-/**
- * Entité Room — miroir de la table FENETRE_COM Oracle.
- *
- * Seules les fenêtres des 7 prochains jours sont mises en cache
- * (stratégie définie dans NanoOrbitRepository).
- * - datetimeDebut stocké en epoch ms.
- *
- * Phase 3 — L3-D
- */
 @Entity(tableName = "fenetres_com")
 data class FenetreEntity(
     @PrimaryKey val idFenetre: Long,
-    val datetimeDebut: Long,      // epoch ms
-    val duree: Int,               // secondes [1-900] — RG-F04
+    val datetimeDebut: Long,
+    val duree: Int,
     val elevationMax: Double,
-    val volumeDonnees: Double?,   // nullable si statut ≠ Réalisée — RG-F05
-    val statut: String,           // Planifiée / Réalisée
+    val volumeDonnees: Double?,
+    val statut: String,
     val idSatellite: String,
     val codeStation: String,
     val lastUpdated: Long = System.currentTimeMillis()
 )
-
-// ── Conversions domaine ↔ entité ────────────────────────────────────────────
 
 fun FenetreCom.toEntity() = FenetreEntity(
     idFenetre     = idFenetre,
