@@ -50,19 +50,6 @@ import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-/**
- * Fiche détaillée d'un satellite — Phase 3 (L3-B) / refactoring routes.
- *
- * Charge le détail complet via GET /satellites/:id (SatelliteDetail) au premier rendu.
- * Les instruments et missions proviennent de la réponse API (plus de mocks).
- *
- * 5 sections :
- *   1. Statut    : StatusBadge, format CubeSat, orbite
- *   2. Télémétrie: masse, capaciteBatterie (LinearProgressIndicator), durée de vie
- *   3. Instruments embarqués : InstrumentItem depuis SatelliteDetail.instruments
- *   4. Missions : MissionBrief depuis SatelliteDetail.missions
- *   5. Bouton "Signaler une anomalie" → AlertDialog
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
@@ -73,18 +60,15 @@ fun DetailScreen(
     val satellite = vm.getSatelliteById(satelliteId)
     val satelliteDetail by vm.satelliteDetail.collectAsState()
 
-    // Déclenche le chargement du détail complet dès l'ouverture de la fiche
     LaunchedEffect(satelliteId) {
         vm.loadSatelliteDetail(satelliteId)
     }
 
-    // Le détail API est utilisé si disponible et correspond au satellite affiché
     val detail = satelliteDetail?.takeIf { it.idSatellite == satelliteId }
 
     var showAnomalieDialog by remember { mutableStateOf(false) }
     var anomalieText by remember { mutableStateOf("") }
 
-    // Résoudre le statut : détail API > liste > défaut OPERATIONNEL
     val effectiveStatut = detail?.statut ?: satellite?.statut ?: StatutSatellite.OPERATIONNEL
 
     Scaffold(
@@ -131,7 +115,6 @@ fun DetailScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // ── Section 1 : Statut ───────────────────────────────────────────
             SectionCard(title = "Statut") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StatusBadge(statut = effectiveStatut)
@@ -151,7 +134,6 @@ fun DetailScreen(
                 detail?.altitude?.let { LabelValue("Altitude", "$it km") }
             }
 
-            // ── Section 2 : Télémétrie ───────────────────────────────────────
             SectionCard(title = "Télémétrie") {
                 val masse = detail?.masse ?: satellite?.masse
                 masse?.let { LabelValue("Masse", "$it kg") }
@@ -167,7 +149,6 @@ fun DetailScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Indicateur visuel de capacité batterie
                 val capBatt = detail?.capaciteBatterie ?: satellite?.capaciteBatterie ?: 0.0
                 val battPct = (capBatt / 60.0).coerceIn(0.0, 1.0).toFloat()
                 Text(
@@ -202,7 +183,6 @@ fun DetailScreen(
                 }
             }
 
-            // ── Section 3 : Instruments embarqués ───────────────────────────
             val instruments = detail?.instruments ?: emptyList()
             SectionCard(title = "Instruments embarqués (${instruments.size})") {
                 if (instruments.isEmpty()) {
@@ -213,7 +193,6 @@ fun DetailScreen(
                     )
                 } else {
                     instruments.forEachIndexed { index, instrDetail ->
-                        // Convertit InstrumentDetail → Instrument pour InstrumentItem
                         val instrument = Instrument(
                             refInstrument  = instrDetail.refInstrument,
                             typeInstrument = instrDetail.typeInstrument,
@@ -231,7 +210,6 @@ fun DetailScreen(
                 }
             }
 
-            // ── Section 4 : Missions ─────────────────────────────────────────
             val missions = detail?.missions ?: emptyList()
             SectionCard(title = "Missions (${missions.size})") {
                 if (missions.isEmpty()) {
@@ -262,7 +240,6 @@ fun DetailScreen(
                 }
             }
 
-            // ── Section 5 : Signaler une anomalie ───────────────────────────
             Button(
                 onClick = { showAnomalieDialog = true },
                 modifier = Modifier.fillMaxWidth()
@@ -274,7 +251,6 @@ fun DetailScreen(
         }
     }
 
-    // ── Dialog de saisie d'anomalie ──────────────────────────────────────────
     if (showAnomalieDialog) {
         AlertDialog(
             onDismissRequest = { showAnomalieDialog = false },
@@ -297,7 +273,6 @@ fun DetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        // TODO : envoyer l'anomalie via ViewModel/Repository
                         showAnomalieDialog = false
                         anomalieText = ""
                     },
@@ -314,8 +289,6 @@ fun DetailScreen(
         )
     }
 }
-
-// ── Composants internes ───────────────────────────────────────────────────────
 
 @Composable
 private fun SectionCard(title: String, content: @Composable () -> Unit) {

@@ -20,6 +20,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,32 +31,16 @@ import com.example.myapplication.ui.components.FenetreCard
 import com.example.myapplication.ui.viewmodel.NanoOrbitViewModel
 import org.koin.androidx.compose.koinViewModel
 
-/**
- * Écran Planning des communications — Phase 3 (L3-C).
- *
- * - Sélecteur de station via FilterChip (tous + une chip par station)
- * - Liste triée chronologiquement par datetimeDebut (tri dans le ViewModel)
- * - Indicateurs : durée totale de contact, volume total planifié
- * - Distinction visuelle Planifiée / Réalisée / Annulée via FenetreCard
- * - Validation côté client RG-F04 [1-900 s] et RG-S06 (satellite désorbité)
- *   implémentée dans NanoOrbitRepository.validateFenetreDuree()
- *
- * Validation RG-S06 — miroir de la règle Oracle :
- *   Un satellite de statut DESORBITE ne peut pas avoir de nouvelles fenêtres.
- *   Côté Android : vérifier satellite.statut == DESORBITE avant création.
- *   Côté Oracle : trigger T1 (trg_valider_fenetre) lève une exception si
- *   le satellite est désorbité (RG-S06). Les deux mécanismes sont complémentaires.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanningScreen(
     vm: NanoOrbitViewModel = koinViewModel()
 ) {
-    val fenetres        by vm.filteredFenetres.collectAsState()
-    val selectedStation by vm.selectedStation.collectAsState()
-    val stations        by vm.stations.collectAsState()
+    val fenetres          by vm.filteredFenetres.collectAsState()
+    val selectedStation   by vm.selectedStation.collectAsState()
+    val stations          by vm.stations.collectAsState()
+    val isFenetresLoading by vm.isFenetresLoading.collectAsState()
 
-    // Calcul des totaux
     val totalDureeMin = fenetres.sumOf { it.duree } / 60
     val totalVolume   = fenetres.mapNotNull { it.volumeDonnees }.sum()
 
@@ -85,7 +70,6 @@ fun PlanningScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ── Sélecteur de station ────────────────────────────────────────
             Text(
                 "Station sol",
                 style = MaterialTheme.typography.labelMedium,
@@ -114,7 +98,6 @@ fun PlanningScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ── Indicateurs totaux ──────────────────────────────────────────
             if (fenetres.isNotEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -136,28 +119,32 @@ fun PlanningScreen(
                 Spacer(modifier = Modifier.height(6.dp))
             }
 
-            // ── Liste triée par datetimeDebut ───────────────────────────────
-            if (fenetres.isEmpty()) {
-                Text(
-                    "Aucune fenêtre de communication disponible.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 32.dp)
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(fenetres, key = { it.idFenetre }) { fenetre ->
-                        FenetreCard(
-                            fenetre    = fenetre,
-                            // nomStation : vue API (enrichie) > lookup stations > codeStation
-                            nomStation = fenetre.nomStation
-                                ?: stations.find { it.codeStation == fenetre.codeStation }?.nomStation
-                                ?: fenetre.codeStation
-                        )
+            PullToRefreshBox(
+                isRefreshing = isFenetresLoading,
+                onRefresh    = vm::refreshFenetres,
+                modifier     = Modifier.fillMaxSize()
+            ) {
+                if (fenetres.isEmpty()) {
+                    Text(
+                        "Aucune fenêtre de communication disponible.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 32.dp)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(fenetres, key = { it.idFenetre }) { fenetre ->
+                            FenetreCard(
+                                fenetre    = fenetre,
+                                nomStation = fenetre.nomStation
+                                    ?: stations.find { it.codeStation == fenetre.codeStation }?.nomStation
+                                    ?: fenetre.codeStation
+                            )
+                        }
                     }
                 }
             }

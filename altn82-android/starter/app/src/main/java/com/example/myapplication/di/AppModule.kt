@@ -12,34 +12,10 @@ import org.koin.dsl.module
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-/**
- * Module Koin — Phase 3 / refactoring routes.
- *
- * Graphe de dépendances :
- *   Retrofit → NanoOrbitApi ──┐
- *                              ├→ NanoOrbitRepository → NanoOrbitViewModel
- *   Room → NanoOrbitDao ──────┘
- *
- * Configuration Gson — stratégie UPPER_CASE_WITH_UNDERSCORES :
- *   node-oracledb avec outFormat: OUT_FORMAT_OBJECT (4002) retourne les noms de colonnes
- *   Oracle en MAJUSCULES (ex: ID_SATELLITE, NOM_SATELLITE, DATE_LANCEMENT).
- *   La stratégie convertit le camelCase Kotlin → UPPER_CASE_WITH_UNDERSCORES pour matcher.
- *     idSatellite      → ID_SATELLITE      ✓
- *     nomSatellite     → NOM_SATELLITE     ✓
- *     dateLancement    → DATE_LANCEMENT    ✓
- *     formatCubesat    → FORMAT_CUBESAT    ✓
- *     capaciteBatterie → CAPACITE_BATTERIE ✓
- *   Exception : les clés ajoutées côté JavaScript (instruments, missions, recentFenetres)
- *   restent en camelCase — gérées avec @SerializedName dans SatelliteDetail.
- *   Exception : statut_fenetre (alias de vue) → géré avec @SerializedName dans FenetreCom.
- */
 val appModule = module {
 
-    // ── Retrofit ─────────────────────────────────────────────────────────────
     single {
         val oracleNamingStrategy = FieldNamingStrategy { field ->
-            // camelCase → UPPER_CASE_WITH_UNDERSCORES
-            // idSatellite → ID_SATELLITE
             field.name
                 .replace(Regex("([A-Z])"), "_$1")
                 .uppercase()
@@ -51,7 +27,7 @@ val appModule = module {
             .create()
 
         Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:3000/")  // 10.0.2.2 = hôte local vu depuis l'émulateur
+            .baseUrl("http://10.0.2.2:3000/")
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
@@ -60,7 +36,6 @@ val appModule = module {
         get<Retrofit>().create(NanoOrbitApi::class.java)
     }
 
-    // ── Room — base de données locale Cache-First ─────────────────────────────
     single {
         NanoOrbitDatabase.create(androidContext())
     }
@@ -69,12 +44,10 @@ val appModule = module {
         get<NanoOrbitDatabase>().nanoOrbitDao()
     }
 
-    // ── Repository ────────────────────────────────────────────────────────────
     single<NanoOrbitRepository> {
         NanoOrbitRepository(api = get(), dao = get())
     }
 
-    // ── ViewModel ─────────────────────────────────────────────────────────────
     viewModel {
         NanoOrbitViewModel(repository = get())
     }
